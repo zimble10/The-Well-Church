@@ -1,0 +1,11 @@
+node_modules
+.next
+out
+build
+coverage
+public
+package-lock.json
+
+# project constitution docs - do not auto-reformat
+CLAUDE.md
+AGENTS.md
