@@ -44,3 +44,6 @@ next-env.d.ts
 # prisma (schema is tracked, generated migrations are not)
 /prisma/migrations
 
+# session handoff notes (ephemeral, not part of the project)
+/HANDOFF.md
+
