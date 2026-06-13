@@ -34,7 +34,7 @@ This roadmap is structured in 6 phases. Each phase must be fully completed and r
 - GitHub Actions: lint → typecheck → test → build on every PR
 - Vercel project connected to GitHub (auto-deploy preview on PR, auto-deploy main to staging)
 - Production deploy is MANUAL trigger only (never auto-deploy to prod)
-- Branch protection on main: require PR, require CI green, require 1 review
+- Branch protection on main: require PR, require CI green — review requirement waived for solo development (GitHub can't allow self-approval); revisit and enable "require 1 review" if a second maintainer joins
 
 ### 0.3 Database
 - Provision PostgreSQL on Railway (staging) and Railway or Supabase (prod)
