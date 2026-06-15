@@ -1,0 +1,174 @@
+// The Well Church — Prisma schema
+// Phase 0.3 (Database). Provider: PostgreSQL on Railway (staging + prod).
+//
+// Row-Level Security on `members` and `transactions` is NOT expressible in the
+// Prisma schema language — it is applied via raw SQL appended to the initial
+// migration (see prisma/migrations/<ts>_init/migration.sql). RLS is enforced
+// through the `app.current_user_id` session GUC, set per request, because this
+// project uses Auth.js (not Supabase Auth) for identity.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL") // pooled connection — app runtime
+  directUrl = env("DIRECT_URL") // direct connection — migrations
+}
+
+enum Role {
+  MEMBER
+  STAFF
+  ADMIN
+  FINANCE_ADMIN
+}
+
+enum TransactionStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+enum TransactionSource {
+  PCO_GIVING
+  STRIPE
+}
+
+// Auth identity. Credentials + OAuth (PCO) wired in Phase 0.4.
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  name          String?
+  image         String?
+
+  // Credentials auth — argon2id hash only, never plaintext. Null for OAuth-only users.
+  passwordHash String?
+
+  // MFA/TOTP — scaffolding now (Phase 0.5), enforced for staff/admin in Phase 2.
+  mfaEnabled Boolean @default(false)
+  totpSecret String? // encrypted at rest (app-level)
+
+  role Role @default(MEMBER)
+
+  accounts Account[]
+  sessions Session[]
+  member   Member?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+// Auth.js v5 adapter — linked OAuth accounts (PCO OAuth provider in Phase 0.4).
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+// Auth.js v5 adapter — database-backed sessions (no JWT-only sessions per AGENTS 0.4).
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+// Auth.js v5 adapter — email verification / password-reset tokens.
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// Church member profile. RLS-protected. Soft-delete only — never hard DELETE.
+model Member {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
+
+  // Planning Center linkage (synced in Phase 2.3).
+  pcoPersonId String? @unique
+
+  // PII — encrypted at rest (app-level); columns hold ciphertext.
+  firstName    String
+  lastName     String
+  phone        String?
+  addressLine1 String?
+  addressLine2 String?
+  city         String?
+  state        String?
+  postalCode   String?
+
+  bio      String?
+  photoUrl String?
+
+  // Directory privacy controls (Phase 2.4).
+  hidePhone   Boolean @default(false)
+  hideEmail   Boolean @default(false)
+  hideAddress Boolean @default(false)
+
+  transactions Transaction[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime? // soft delete
+
+  @@index([lastName, firstName])
+  @@map("members")
+}
+
+// Giving record. RLS-protected. Soft-delete only.
+// NEVER stores raw card data — PCI scope is delegated to PCO Giving / Stripe.
+// Only external transaction references are kept.
+model Transaction {
+  id       String @id @default(cuid())
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id])
+
+  amountCents Int // integer minor units — never floating point
+  currency    String            @default("usd")
+  fund        String // Tithe, Building Fund, Missions, Special Offering
+  status      TransactionStatus @default(PENDING)
+  source      TransactionSource
+
+  // External references only — no card data ever.
+  pcoDonationId         String? @unique
+  stripePaymentIntentId String? @unique
+
+  occurredAt DateTime
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime? // soft delete
+
+  @@index([memberId])
+  @@index([occurredAt])
+  @@map("transactions")
+}
