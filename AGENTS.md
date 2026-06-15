@@ -1,6 +1,6 @@
 # AGENTS.md
 **Architectural Roadmap & Agent Workflow Guide**
-Henderson, NV Church Website — v1.1
+The Well Church — Henderson, NV — v1.2
 
 ---
 
@@ -28,12 +28,16 @@ This roadmap is structured in 6 phases. Each phase must be fully completed and r
 - Configure ESLint flat config (`eslint.config.mjs`: `eslint-config-next/core-web-vitals` + `eslint-config-next/typescript` + `eslint-config-prettier`), Prettier, Husky pre-commit hooks — `next lint` is removed in v16, lint via `eslint .`
 - Set up path aliases: `@/components`, `@/lib`, `@/app`
 - Add `.env.example` with all required variable names (no values)
-- Configure `.gitignore` to exclude `.env*`, `*.pem`, `/prisma/migrations` (include schema only)
+- Configure `.gitignore` to exclude `.env*` and `*.pem` — **track both `prisma/schema.prisma` AND `prisma/migrations/`** (the versioned migration history must be committed so staging/prod reproduce schema via `prisma migrate deploy`)
 
 ### 0.2 CI/CD Pipeline
 - GitHub Actions: lint → typecheck → test → build on every PR
 - Vercel project connected to GitHub (auto-deploy preview on PR, auto-deploy main to staging)
 - Production deploy is MANUAL trigger only (never auto-deploy to prod)
+- Supply-chain security in CI from day one:
+  - `.github/dependabot.yml` — weekly npm + GitHub Actions update PRs
+  - CI `security` job runs `npm audit --audit-level=high` (block on high/critical)
+  - GitHub secret scanning + push protection enabled on the repo; add `gitleaks` to pre-commit if a secret ever slips
 - Branch protection on main: require PR, require CI green — review requirement waived for solo development (GitHub can't allow self-approval); revisit and enable "require 1 review" if a second maintainer joins
 
 ### 0.3 Database
@@ -52,7 +56,14 @@ This roadmap is structured in 6 phases. Each phase must be fully completed and r
 - Auth tokens in httpOnly, Secure, SameSite=Strict cookies
 
 ### 0.5 Security Baselines
-- `next.config.ts`: Content Security Policy headers, X-Frame-Options, X-Content-Type-Options
+- `next.config.ts` `headers()` — full hardened header set:
+  - Content-Security-Policy (nonce-based; no `unsafe-inline`/`unsafe-eval`)
+  - Strict-Transport-Security (`max-age=63072000; includeSubDomains; preload`)
+  - Referrer-Policy (`strict-origin-when-cross-origin`)
+  - Permissions-Policy (deny camera/microphone/geolocation and other unused features)
+  - X-Frame-Options `DENY` / CSP `frame-ancestors 'none'`, X-Content-Type-Options `nosniff`
+- Bot/abuse protection (Cloudflare Turnstile or hCaptcha) wired for public forms + registration
+- MFA/TOTP scaffolding for staff/admin accounts (enforced in Phase 2; audited in Phase 4)
 - Rate limiting with `@upstash/ratelimit` on auth routes (5 attempts / 15 min per IP)
 - CORS: restrict API routes to same-origin + PCO webhook IPs
 - Enable HTTPS-only (Vercel enforces this; verify staging)
@@ -225,6 +236,8 @@ Structure content so AI assistants (ChatGPT, Perplexity, Google AI Overviews) ca
 ### 4.1 Authentication Audit
 - Review all auth flows for session fixation, token leakage, replay attacks
 - Confirm httpOnly cookie flags on all environments
+- Verify MFA/TOTP is enforced for all staff/admin accounts and cannot be bypassed
+- Confirm password hashing uses argon2id (or bcrypt ≥ 12 rounds) — no weaker fallback
 - Verify account lockout after failed login attempts
 - Test password reset flow for token expiry and single-use enforcement
 - Confirm email verification cannot be bypassed

@@ -41,8 +41,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# prisma (schema is tracked, generated migrations are not)
-/prisma/migrations
+# prisma — schema AND migrations are tracked (the versioned migration history
+# must be committed so staging/prod reproduce schema via `prisma migrate deploy`).
+# Only real secrets (the .env* files ignored above) stay out of git.
 
 # session handoff notes (ephemeral, not part of the project)
 /HANDOFF.md

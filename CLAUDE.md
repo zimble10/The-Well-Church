@@ -1,6 +1,6 @@
 # CLAUDE.md
 **AI Agent Context & Project Constitution**
-Henderson, NV Church Website — v1.1
+The Well Church — Henderson, NV — v1.2
 
 ---
 
@@ -10,7 +10,7 @@ This file is the authoritative context document for all Claude agents working on
 
 | Field | Value |
 |---|---|
-| Project Name | Henderson Church Website |
+| Project Name | The Well Church (Henderson, NV) |
 | Client Type | Local church — Henderson, NV (non-profit, faith-based) |
 | Primary Goal | Full-featured public + members website with secure transactions |
 | Stack | Next.js 16+ (App Router, Turbopack default) + Node.js 20.9+ + PostgreSQL + Tailwind CSS v4 |
@@ -55,15 +55,25 @@ Next.js 16 made several breaking changes from the 14/15 conventions baked into A
 - **`images.domains` is deprecated** — use `images.remotePatterns` in `next.config.ts` for any external image sources (Cloudinary, PCO avatars, etc.).
 - **`revalidateTag` requires a `cacheLife` profile** as its second argument when `cacheComponents` is enabled — relevant for PCO sync revalidation (Phase 2) and giving history (Phase 3).
 - **shadcn/ui CLI must be current** — use the latest `npx shadcn@latest add ...` when scaffolding components; older CLI versions assume Tailwind v3 config and will not match the v4 CSS-first setup.
+- **Partial Prerendering (PPR)** is available — prefer it for pages mixing a static shell with dynamic data (sermon/event pages with live PCO data). Enable per route via `export const experimental_ppr = true` once validated; pair with `<Suspense>` + `loading.tsx` streaming.
+- **React Compiler (React 19)** may be enabled (`reactCompiler: true` in `next.config.ts`) to auto-memoize components — adopt only after confirming build + test suite stay green.
 - Minimum versions: Node.js 20.9+, TypeScript 5.1+, React 19.2.
 
 ### 3.2 Security
 - JWT tokens stored in httpOnly cookies only — never localStorage or sessionStorage
 - All member routes protected via Next.js proxy (`proxy.ts`, Node.js runtime) with role-based auth
+- Multi-factor authentication (MFA/TOTP) REQUIRED for all staff/admin accounts; offered opt-in to members
+- Password hashing with **argon2id** (OWASP-preferred); bcrypt ≥ 12 rounds acceptable only where argon2 is unavailable
+- Bot/abuse protection (Cloudflare Turnstile or hCaptcha) on registration, contact, and every public form
 - Input validation with Zod on every API route, both client and server
 - CSRF protection on all state-mutating endpoints
 - Rate limiting on auth endpoints, donation endpoints, and all public forms
-- Content Security Policy (CSP) headers configured via `next.config.ts` `headers()` (and/or `proxy.ts` for dynamic per-route policies)
+- Full hardened header set via `next.config.ts` `headers()` (and/or `proxy.ts` for dynamic per-route policies):
+  - Content-Security-Policy (nonce-based — no `unsafe-inline`/`unsafe-eval`), `frame-ancestors 'none'`
+  - Strict-Transport-Security (HSTS — `max-age` ≥ 1 year, `includeSubDomains`, `preload`)
+  - Referrer-Policy (`strict-origin-when-cross-origin`), Permissions-Policy (deny unused features)
+  - X-Frame-Options `DENY`, X-Content-Type-Options `nosniff`
+- Automated dependency scanning (Dependabot + `npm audit` in CI) and secret scanning (GitHub secret scanning / gitleaks) — block merges on high/critical findings
 - Environment variables in `.env.local` — NEVER committed to git
 - Secrets rotated per environment (dev / staging / prod)
 - PII must be encrypted at rest (member records, transaction data)
@@ -78,6 +88,7 @@ Next.js 16 made several breaking changes from the 14/15 conventions baked into A
 
 ### 3.4 Performance & SEO
 - Core Web Vitals targets: LCP < 2.5s, CLS < 0.1, INP < 200ms (INP replaced FID as the Core Web Vital responsiveness metric in March 2024)
+- Use Partial Prerendering + streaming (`<Suspense>`, `loading.tsx`) to keep LCP fast on data-backed pages (sermons, events, dashboard)
 - Images: Next.js Image component with WebP/AVIF, never raw `<img>` tags
 - Fonts: next/font with font-display: swap
 - All public pages must have unique meta title, description, and OG tags
