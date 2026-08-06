@@ -5,6 +5,7 @@ import { Marquee } from '@/components/ui/marquee';
 import { Reveal } from '@/components/ui/reveal';
 import { SectionLabel } from '@/components/ui/section-label';
 import { ComingSoonBadge } from '@/components/ui/coming-soon';
+import { StageImage } from '@/components/ui/stage-image';
 import { church, serviceTimes, pillars, ministries, events } from '@/lib/site';
 
 export default function HomePage() {
@@ -62,9 +63,10 @@ export default function HomePage() {
       {/* ============================ MARQUEE ============================ */}
       <Marquee items={pillars.map((p) => p.name)} />
 
-      {/* ============================ SERVICE TIMES ============================ */}
-      <section className="mx-auto max-w-6xl px-6 py-24">
-        <div className="grid gap-12 md:grid-cols-[1fr_1.1fr] md:items-center">
+      {/* ============================ SERVICE TIMES (staged: logo) ============================ */}
+      <section className="relative mx-auto max-w-6xl px-6 py-24">
+        <StageImage src="/logo.png" />
+        <div className="relative z-10 grid gap-12 md:grid-cols-[1fr_1.1fr] md:items-center">
           <Reveal>
             <div>
               <SectionLabel index={1}>Gather With Us</SectionLabel>
@@ -123,8 +125,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ============================ 5 PILLARS (staged: logo) ============================ */}
-      <section id="who-we-are" data-stage-src="/logo.png">
+      {/* ============================ 5 PILLARS ============================ */}
+      <section>
         <div className="mx-auto max-w-6xl px-6 py-24">
           <Reveal>
             <SectionLabel index={2}>Who We Are</SectionLabel>
@@ -132,9 +134,9 @@ export default function HomePage() {
               We grow together in <span className="text-metal">five pillars of faith.</span>
             </h2>
           </Reveal>
-          <div className="border-ink-line/50 bg-ink-line/30 mt-14 grid gap-px overflow-hidden rounded-xl border sm:grid-cols-2 lg:grid-cols-3">
+          <div className="border-ink-line bg-ink-line mt-14 grid gap-px overflow-hidden rounded-xl border sm:grid-cols-2 lg:grid-cols-3">
             {pillars.map((pillar, i) => (
-              <Reveal key={pillar.name} delay={i * 70} className="bg-ink/55 p-8 backdrop-blur-md">
+              <Reveal key={pillar.name} delay={i * 70} className="bg-ink p-8">
                 <span className="font-mono text-sm text-blue-500">
                   {(i + 1).toString().padStart(2, '0')}
                 </span>
@@ -142,10 +144,7 @@ export default function HomePage() {
                 <p className="text-paper-muted mt-3 text-sm leading-relaxed">{pillar.blurb}</p>
               </Reveal>
             ))}
-            <Reveal
-              delay={pillars.length * 70}
-              className="bg-ink/55 flex flex-col justify-center p-8 backdrop-blur-md"
-            >
+            <Reveal delay={pillars.length * 70} className="bg-ink flex flex-col justify-center p-8">
               <Cta href="/who-we-are" variant="ghost" arrow="→">
                 Our Story
               </Cta>

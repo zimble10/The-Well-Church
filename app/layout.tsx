@@ -4,8 +4,6 @@ import './globals.css';
 import { SiteHeader } from '@/components/layout/site-header';
 import { SiteFooter } from '@/components/layout/site-footer';
 import { ScrollBackdrop } from '@/components/ui/scroll-backdrop';
-import { SectionStage } from '@/components/ui/section-stage';
-import { stageImages } from '@/lib/site';
 
 // Display serif — high-contrast, characterful (headings, hero).
 const fraunces = Fraunces({
@@ -61,7 +59,6 @@ export default function RootLayout({
     >
       <body className="bg-ink text-paper flex min-h-full flex-col">
         <ScrollBackdrop />
-        <SectionStage images={stageImages} />
         <SiteHeader />
         {/* overflow-x-clip: safety net so no section can cause horizontal scroll */}
         <main className="flex-1 overflow-x-clip">{children}</main>

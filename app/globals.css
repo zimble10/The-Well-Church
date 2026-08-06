@@ -76,20 +76,22 @@
   pointer-events: none;
   background-color: #0a0908;
   background-image:
-    /* legibility scrim — caps peak lightness so body text always clears AA */
-    linear-gradient(rgba(8, 8, 9, 0.35), rgba(8, 8, 9, 0.35)),
+    /* light legibility scrim — kept low so the colours stay defined, not muddy */
+    linear-gradient(rgba(6, 6, 8, 0.18), rgba(6, 6, 8, 0.18)),
     /* traveling silver sheen (subtle, moves horizontally with scroll) */
-    linear-gradient(115deg, transparent 42%, rgba(196, 208, 220, 0.06) 50%, transparent 58%),
-    /* directional metallic journey the viewport scans as you scroll:
-       BLACK (top) → SILVER (middle) → BLUE (bottom) */
+    linear-gradient(115deg, transparent 44%, rgba(202, 214, 226, 0.05) 50%, transparent 56%),
+    /* distinct metallic PLATEAUS the viewport parks on as you scroll:
+       BLACK (top) → SILVER, a neutral cool grey (middle) → BLUE, saturated (bottom).
+       Each plateau is flat and wider than one viewport so its colour reads cleanly;
+       the shifts happen in the short ramps between them. */
     linear-gradient(
         180deg,
-        #0a0908 0%,
-        #12130f 14%,
-        #363d45 46%,
-        #24313d 66%,
-        #123a58 88%,
-        #0d2c44 100%
+        #070709 0%,
+        #070709 28%,
+        #4b515b 45%,
+        #4b515b 60%,
+        #123f7d 82%,
+        #123f7d 100%
       );
   background-size:
     100% 100%,
@@ -106,8 +108,9 @@
 @media (prefers-reduced-motion: reduce) {
   .site-bg {
     background-position:
-      50% 50%,
-      50% 40%;
+      0 0,
+      50% 40%,
+      50% 45%;
     transition: none;
   }
 }
@@ -139,10 +142,27 @@
     color: #fff;
   }
 
-  /* Themed scrollbar to complete the "designed" feel */
+  /* Firefox: blue thumb on ink track (Firefox can't do gradient thumbs) */
   * {
-    scrollbar-color: var(--color-ink-line) var(--color-ink);
+    scrollbar-color: var(--color-blue-600) var(--color-ink);
   }
+}
+
+/* WebKit/Blink: metallic-blue gradient scrollbar, matching the accent text */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+::-webkit-scrollbar-track {
+  background: #0a0908;
+}
+::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  border: 3px solid #0a0908;
+  background: linear-gradient(180deg, #8fd3f1 0%, #4eaede 45%, #1f7bb0 100%);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #a9def5 0%, #4eaede 45%, #2f93c9 100%);
 }
 
 @layer utilities {
@@ -299,28 +319,42 @@
   margin-right: 2rem;
 }
 
-/* ---- Section stage: fixed large image that swaps per active section ---- */
-.section-stage {
-  position: fixed;
-  inset: 0;
-  z-index: -1; /* above .site-bg (also -1, earlier in DOM), below content */
-  pointer-events: none;
-}
-.section-stage-cell {
+/* ---- Section stage image: scrolls WITH its section, opacity driven by the
+   section's progress through the viewport (native CSS scroll timeline). It fades
+   in as the section enters, peaks when centered, and fades out as it leaves ---- */
+.stage-image {
   position: absolute;
   inset: 0;
+  z-index: 0; /* behind the section's own content (which is relative z-10) */
+  pointer-events: none;
   display: grid;
   place-items: center;
   opacity: 0;
-  transition: opacity 0.9s ease;
+  animation: stage-fade linear both;
+  animation-timeline: view();
 }
-.section-stage-cell[data-active='true'] {
-  opacity: 0.16;
-}
-.section-stage-frame {
+.stage-image-frame {
   position: relative;
-  width: min(80vw, 600px);
+  width: min(72vw, 540px);
   aspect-ratio: 1 / 1;
+}
+@keyframes stage-fade {
+  0% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.2;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+/* Browsers without scroll-driven animations: show a gentle static watermark. */
+@supports not (animation-timeline: view()) {
+  .stage-image {
+    opacity: 0.1;
+    animation: none;
+  }
 }
 
 /* Ambient blue mesh glow, used behind hero sections */

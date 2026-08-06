@@ -135,10 +135,3 @@ export const leadership = [
 
 /** Watch-anywhere apps — REAL */
 export const apps = ['iOS', 'Android', 'Amazon Fire', 'Roku'] as const;
-
-/**
- * Images the <SectionStage> can display, one per staged section. Each must match
- * a `data-stage-src` on a section. Add church photos here (and on their sections)
- * as they arrive — e.g. '/photos/worship.png' on the "What We Do" section.
- */
-export const stageImages = ['/logo.png'] as const;
