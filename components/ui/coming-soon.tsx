@@ -27,7 +27,6 @@ export function ComingSoonBlock({
 }) {
   return (
     <section className="relative mx-auto max-w-3xl px-6 py-28 text-center sm:py-36">
-      <div className="mesh-glow" />
       <div className="relative">
         <SectionLabel index={index}>{eyebrow}</SectionLabel>
         <h1 className="text-metal mt-6 text-5xl sm:text-6xl">{title}</h1>

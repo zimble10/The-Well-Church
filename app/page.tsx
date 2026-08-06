@@ -13,7 +13,6 @@ export default function HomePage() {
     <>
       {/* ============================ HERO ============================ */}
       <section className="relative flex min-h-[92vh] items-center overflow-hidden">
-        <div className="mesh-glow" />
         {/* Thematic well — faint background element, masked so it never crowds the text */}
         <Image
           src="/well.png"
@@ -64,7 +63,7 @@ export default function HomePage() {
       <Marquee items={pillars.map((p) => p.name)} />
 
       {/* ============================ SERVICE TIMES (staged: logo) ============================ */}
-      <section className="relative mx-auto max-w-6xl px-6 py-24">
+      <section className="stage-host relative mx-auto max-w-6xl px-6 py-24">
         <StageImage src="/logo.png" />
         <div className="relative z-10 grid gap-12 md:grid-cols-[1fr_1.1fr] md:items-center">
           <Reveal>
@@ -257,7 +256,6 @@ export default function HomePage() {
 
       {/* ============================ GIVE CTA BAND ============================ */}
       <section className="relative overflow-hidden">
-        <div className="mesh-glow" />
         <div className="relative mx-auto max-w-4xl px-6 py-28 text-center">
           <Reveal>
             <SectionLabel index={6}>Generosity</SectionLabel>

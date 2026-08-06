@@ -96,7 +96,6 @@ export default function WhoWeArePage() {
 
       {/* CTA */}
       <section className="relative overflow-hidden">
-        <div className="mesh-glow" />
         <div className="relative mx-auto max-w-3xl px-6 py-24 text-center">
           <Reveal>
             <h2 className="text-4xl sm:text-5xl">

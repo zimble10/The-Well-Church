@@ -66,52 +66,45 @@
   initial-value: 0;
 }
 
-/* ---- Scroll-driven metallic backdrop: black · steel-blue · graphite-silver ----
-   All bands are deliberately dark so text stays legible at every scroll position;
-   bright "silver" is only a faint traveling sheen. Sits behind all content. */
+/* ---- Chameleon backdrop (ported from the family-road-trip effect) ----
+   One fixed gradient behind the WHOLE page. Its ANGLE rotates with scroll
+   (--scroll, set by <ScrollBackdrop>), so the black / silver / blue bands sweep
+   across the viewport like paint viewed from a shifting angle; a slow shimmer
+   adds life. Recoloured to the church's three tones (no rainbow hue-cycling —
+   a small ± hue flip keeps the blue a blue). A light flat scrim protects text. */
 .site-bg {
   position: fixed;
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background-color: #0a0908;
+  background-color: #070709;
   background-image:
-    /* light legibility scrim — kept low so the colours stay defined, not muddy */
-    linear-gradient(rgba(6, 6, 8, 0.18), rgba(6, 6, 8, 0.18)),
-    /* traveling silver sheen (subtle, moves horizontally with scroll) */
-    linear-gradient(115deg, transparent 44%, rgba(202, 214, 226, 0.05) 50%, transparent 56%),
-    /* distinct metallic PLATEAUS the viewport parks on as you scroll:
-       BLACK (top) → SILVER, a neutral cool grey (middle) → BLUE, saturated (bottom).
-       Each plateau is flat and wider than one viewport so its colour reads cleanly;
-       the shifts happen in the short ramps between them. */
+    linear-gradient(rgba(6, 6, 9, 0.22), rgba(6, 6, 9, 0.22)),
     linear-gradient(
-        180deg,
-        #070709 0%,
-        #070709 28%,
-        #4b515b 45%,
-        #4b515b 60%,
-        #123f7d 82%,
-        #123f7d 100%
-      );
-  background-size:
-    100% 100%,
-    200% 300%,
-    100% 300%;
-  background-position:
-    0 0,
-    calc(var(--scroll) * 100%) 50%,
-    50% calc(var(--scroll) * 100%);
-  background-repeat: no-repeat;
-  /* eases the shift so it feels slow and molten rather than 1:1 with scroll */
-  transition: background-position 0.25s ease-out;
+      calc(150deg + var(--scroll, 0) * 240deg),
+      #070709 0%,
+      #123f7d 20%,
+      #444b56 38%,
+      #0b1a30 52%,
+      #444b56 66%,
+      #123f7d 82%,
+      #070709 100%
+    );
+  animation: chameleon-shift 16s ease-in-out infinite;
+}
+@keyframes chameleon-shift {
+  0%,
+  100% {
+    filter: saturate(1.1) brightness(0.9) hue-rotate(-8deg);
+  }
+  50% {
+    filter: saturate(1.28) brightness(0.98) hue-rotate(10deg);
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .site-bg {
-    background-position:
-      0 0,
-      50% 40%,
-      50% 45%;
-    transition: none;
+    animation: none;
+    filter: saturate(1.12) brightness(0.92);
   }
 }
 
@@ -319,41 +312,55 @@
   margin-right: 2rem;
 }
 
-/* ---- Section stage image: scrolls WITH its section, opacity driven by the
-   section's progress through the viewport (native CSS scroll timeline). It fades
-   in as the section enters, peaks when centered, and fades out as it leaves ---- */
+/* ---- Section stage image ----
+   A large, faint image tied to its section's scroll timeline. The image is
+   position:FIXED (viewport-centred), and the section's progress through the
+   viewport drives it: it rises INTO centre + fades in, holds STATIONARY at
+   centre through the middle of the section, then rises out + fades away.
+   `.stage-host` (the section) publishes the timeline; the fixed image reads it. */
+.stage-host {
+  view-timeline-name: --stage;
+  view-timeline-axis: block;
+}
 .stage-image {
-  position: absolute;
+  position: fixed;
   inset: 0;
-  z-index: 0; /* behind the section's own content (which is relative z-10) */
+  z-index: -1; /* above .site-bg, below all content */
   pointer-events: none;
   display: grid;
   place-items: center;
   opacity: 0;
-  animation: stage-fade linear both;
-  animation-timeline: view();
+  animation: stage-inout linear both;
+  animation-timeline: --stage;
 }
 .stage-image-frame {
   position: relative;
   width: min(72vw, 540px);
   aspect-ratio: 1 / 1;
 }
-@keyframes stage-fade {
+@keyframes stage-inout {
   0% {
     opacity: 0;
+    transform: translateY(16vh);
   }
-  50% {
+  28% {
     opacity: 0.2;
+    transform: translateY(0);
+  }
+  72% {
+    opacity: 0.2;
+    transform: translateY(0);
   }
   100% {
     opacity: 0;
+    transform: translateY(-16vh);
   }
 }
-/* Browsers without scroll-driven animations: show a gentle static watermark. */
+/* No scroll-driven-animation support: skip the effect rather than pin a static
+   full-page watermark. */
 @supports not (animation-timeline: view()) {
   .stage-image {
-    opacity: 0.1;
-    animation: none;
+    display: none;
   }
 }
 

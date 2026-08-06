@@ -5,7 +5,6 @@ import { church, nav, serviceTimes, apps } from '@/lib/site';
 export function SiteFooter() {
   return (
     <footer className="border-ink-line/70 relative border-t">
-      <div className="mesh-glow opacity-60" />
       <div className="relative mx-auto max-w-6xl px-6 py-16">
         <div className="grid gap-12 md:grid-cols-[1.4fr_1fr_1fr]">
           {/* Brand + address */}

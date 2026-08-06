@@ -15,7 +15,6 @@ export function PageHero({
 }) {
   return (
     <section className="relative overflow-hidden">
-      <div className="mesh-glow" />
       <div className="relative mx-auto max-w-6xl px-6 pt-20 pb-14 sm:pt-28 sm:pb-20">
         <Reveal>
           <SectionLabel index={index}>{eyebrow}</SectionLabel>
