@@ -124,9 +124,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ============================ 5 PILLARS ============================ */}
-      <section>
-        <div className="mx-auto max-w-6xl px-6 py-24">
+      {/* ============================ 5 PILLARS (staged: pastor) ============================ */}
+      <section className="stage-host relative">
+        <StageImage src="/pastor.png" />
+        <div className="relative z-10 mx-auto max-w-6xl px-6 py-24">
           <Reveal>
             <SectionLabel index={2}>Who We Are</SectionLabel>
             <h2 className="mt-6 max-w-3xl text-4xl sm:text-5xl">

@@ -87,18 +87,18 @@
   inset: -40%;
   background: conic-gradient(
     from 0deg at 50% 50%,
-    rgba(16, 63, 125, 0) 0deg,
-    rgba(16, 63, 125, 0.3) 45deg,
-    rgba(142, 152, 168, 0) 90deg,
-    rgba(142, 152, 168, 0.26) 135deg,
-    rgba(16, 63, 125, 0) 180deg,
-    rgba(16, 63, 125, 0.28) 225deg,
-    rgba(142, 152, 168, 0) 270deg,
-    rgba(142, 152, 168, 0.24) 315deg,
-    rgba(16, 63, 125, 0) 360deg
+    rgba(28, 96, 182, 0) 0deg,
+    rgba(28, 96, 182, 0.46) 45deg,
+    rgba(158, 170, 190, 0) 90deg,
+    rgba(158, 170, 190, 0.42) 135deg,
+    rgba(28, 96, 182, 0) 180deg,
+    rgba(28, 96, 182, 0.42) 225deg,
+    rgba(158, 170, 190, 0) 270deg,
+    rgba(158, 170, 190, 0.38) 315deg,
+    rgba(28, 96, 182, 0) 360deg
   );
-  filter: blur(72px) saturate(1.15);
-  animation: well-swirl 46s linear infinite;
+  filter: blur(72px) saturate(1.2);
+  animation: well-swirl 88s linear infinite;
   will-change: transform;
 }
 /* Vignette — darkens the edges like the well walls, keeping the centre the focus. */
