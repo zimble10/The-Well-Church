@@ -78,7 +78,9 @@
     font-family: var(--font-display);
     font-weight: 600;
     letter-spacing: -0.02em;
-    line-height: 1.02;
+    /* 1.1 leaves room for Fraunces' long descenders (g, p, y) so tight
+       multi-line headings don't clip. */
+    line-height: 1.1;
     text-wrap: balance;
   }
 

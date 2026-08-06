@@ -19,9 +19,9 @@ export default function HomePage() {
             </p>
           </Reveal>
           <Reveal delay={80}>
-            <h1 className="mt-8 text-[2.65rem] leading-[1.02] sm:text-6xl md:text-7xl lg:text-[6.25rem] lg:leading-[0.95]">
-              <span className="text-paper block">Loving People.</span>
-              <span className="text-metal block">Teaching Truth.</span>
+            <h1 className="mt-8 text-[2.65rem] leading-[1.08] sm:text-6xl md:text-7xl lg:text-[6.25rem]">
+              <span className="text-paper block pb-[0.06em]">Loving People.</span>
+              <span className="text-metal block pb-[0.06em]">Teaching Truth.</span>
             </h1>
           </Reveal>
           <Reveal delay={160}>
