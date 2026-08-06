@@ -24,9 +24,10 @@ export function SectionStage({ images }: { images: readonly string[] }) {
     const io = new IntersectionObserver(
       (entries) => {
         for (const e of entries) ratios.set(e.target, e.intersectionRatio);
-        // active = the staged section with the greatest visible area (min presence 20%)
+        // active = the staged section with the greatest visible area. The floor is
+        // tiny so the image begins fading in the moment a section enters view.
         let best: string | null = null;
-        let bestRatio = 0.2;
+        let bestRatio = 0.02;
         for (const [el, r] of ratios) {
           if (r > bestRatio) {
             bestRatio = r;
@@ -35,7 +36,7 @@ export function SectionStage({ images }: { images: readonly string[] }) {
         }
         setActive(best);
       },
-      { threshold: [0, 0.2, 0.4, 0.6, 0.8, 1] },
+      { threshold: [0, 0.02, 0.08, 0.2, 0.4, 0.65, 0.9] },
     );
 
     nodes.forEach((n) => io.observe(n));

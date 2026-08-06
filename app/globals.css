@@ -77,23 +77,24 @@
   background-color: #0a0908;
   background-image:
     /* legibility scrim — caps peak lightness so body text always clears AA */
-    linear-gradient(rgba(8, 8, 9, 0.32), rgba(8, 8, 9, 0.32)),
+    linear-gradient(rgba(8, 8, 9, 0.35), rgba(8, 8, 9, 0.35)),
     /* traveling silver sheen (subtle, moves horizontally with scroll) */
-    linear-gradient(115deg, transparent 43%, rgba(190, 202, 214, 0.055) 50%, transparent 57%),
-    /* the metallic colour sequence the viewport scans through as you scroll */
+    linear-gradient(115deg, transparent 42%, rgba(196, 208, 220, 0.06) 50%, transparent 58%),
+    /* directional metallic journey the viewport scans as you scroll:
+       BLACK (top) → SILVER (middle) → BLUE (bottom) */
     linear-gradient(
         180deg,
         #0a0908 0%,
-        #0b2536 18%,
-        #2b333f 40%,
-        #123a57 62%,
-        #1b2531 82%,
-        #0a0908 100%
+        #12130f 14%,
+        #363d45 46%,
+        #24313d 66%,
+        #123a58 88%,
+        #0d2c44 100%
       );
   background-size:
     100% 100%,
-    200% 220%,
-    100% 220%;
+    200% 300%,
+    100% 300%;
   background-position:
     0 0,
     calc(var(--scroll) * 100%) 50%,
@@ -314,7 +315,7 @@
   transition: opacity 0.9s ease;
 }
 .section-stage-cell[data-active='true'] {
-  opacity: 0.14;
+  opacity: 0.16;
 }
 .section-stage-frame {
   position: relative;

@@ -52,8 +52,7 @@ export default function HomePage() {
             </div>
           </Reveal>
           <Reveal delay={320}>
-            <div className="text-paper-dim mt-16 flex items-center gap-3 font-mono text-xs tracking-widest uppercase">
-              <span className="bg-metal h-8 w-px" />
+            <div className="text-paper-dim mt-16 font-mono text-xs tracking-widest uppercase">
               Sundays · {serviceTimes.inPerson.join(' / ')}
             </div>
           </Reveal>
