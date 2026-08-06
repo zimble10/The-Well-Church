@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { Cta } from '@/components/ui/cta';
 import { Marquee } from '@/components/ui/marquee';
 import { Reveal } from '@/components/ui/reveal';
@@ -12,6 +13,16 @@ export default function HomePage() {
       {/* ============================ HERO ============================ */}
       <section className="relative flex min-h-[92vh] items-center overflow-hidden">
         <div className="mesh-glow" />
+        {/* Thematic well — faint background element, masked so it never crowds the text */}
+        <Image
+          src="/well.png"
+          alt=""
+          aria-hidden
+          width={695}
+          height={719}
+          priority
+          className="pointer-events-none absolute top-1/2 right-[2%] hidden h-auto w-[min(50vw,620px)] max-w-none -translate-y-1/2 [mask-image:linear-gradient(to_right,transparent,#000_42%,#000)] opacity-[0.13] sm:block"
+        />
         <div className="relative mx-auto w-full max-w-6xl px-6 py-24">
           <Reveal>
             <p className="eyebrow">
