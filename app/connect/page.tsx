@@ -90,7 +90,7 @@ export default function ConnectPage() {
       </section>
 
       {/* Contact form (demo — not wired) */}
-      <section className="border-ink-line/70 bg-ink-soft/40 border-y">
+      <section>
         <div className="mx-auto max-w-3xl px-6 py-20">
           <Reveal>
             <div className="flex items-center justify-between gap-4">

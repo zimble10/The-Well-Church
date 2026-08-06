@@ -75,7 +75,7 @@ export default function WhatWeDoPage() {
       </section>
 
       {/* Kids reassurance band */}
-      <section className="border-ink-line/70 bg-ink-soft/40 border-y">
+      <section>
         <div className="mx-auto max-w-6xl px-6 py-20">
           <div className="grid gap-10 md:grid-cols-2 md:items-center">
             <Reveal>

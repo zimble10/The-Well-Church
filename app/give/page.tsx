@@ -86,7 +86,7 @@ export default function GivePage() {
       </section>
 
       {/* Watch online band */}
-      <section className="border-ink-line/70 bg-ink-soft/40 border-y">
+      <section>
         <div className="mx-auto max-w-4xl px-6 py-20 text-center">
           <Reveal>
             <SectionLabel index={2}>Watch Online</SectionLabel>

@@ -44,7 +44,7 @@ export default function WhoWeArePage() {
       </section>
 
       {/* Pillars detail */}
-      <section className="border-ink-line/70 bg-ink-soft/40 border-y">
+      <section>
         <div className="mx-auto max-w-6xl px-6 py-20">
           <Reveal>
             <SectionLabel index={1}>Five Pillars</SectionLabel>
@@ -95,7 +95,7 @@ export default function WhoWeArePage() {
       </section>
 
       {/* CTA */}
-      <section className="border-ink-line relative overflow-hidden border-t">
+      <section className="relative overflow-hidden">
         <div className="mesh-glow" />
         <div className="relative mx-auto max-w-3xl px-6 py-24 text-center">
           <Reveal>

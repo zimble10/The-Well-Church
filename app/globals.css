@@ -298,6 +298,30 @@
   margin-right: 2rem;
 }
 
+/* ---- Section stage: fixed large image that swaps per active section ---- */
+.section-stage {
+  position: fixed;
+  inset: 0;
+  z-index: -1; /* above .site-bg (also -1, earlier in DOM), below content */
+  pointer-events: none;
+}
+.section-stage-cell {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  transition: opacity 0.9s ease;
+}
+.section-stage-cell[data-active='true'] {
+  opacity: 0.14;
+}
+.section-stage-frame {
+  position: relative;
+  width: min(80vw, 600px);
+  aspect-ratio: 1 / 1;
+}
+
 /* Ambient blue mesh glow, used behind hero sections */
 .mesh-glow {
   position: absolute;
