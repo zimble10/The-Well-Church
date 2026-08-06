@@ -77,38 +77,54 @@
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background-color: #070709;
-  background-image:
-    linear-gradient(rgba(6, 6, 9, 0.22), rgba(6, 6, 9, 0.22)),
-    linear-gradient(
-      calc(150deg + var(--scroll, 0) * 240deg),
-      #070709 0%,
-      #123f7d 20%,
-      #444b56 38%,
-      #0b1a30 52%,
-      #444b56 66%,
-      #123f7d 82%,
-      #070709 100%
-    );
-  animation: chameleon-shift 16s ease-in-out infinite;
+  overflow: hidden;
+  background-color: #060708; /* black — the dominant colour (the dark well) */
 }
-@keyframes chameleon-shift {
-  0%,
-  100% {
-    filter: saturate(1.1) brightness(0.9) hue-rotate(-8deg);
-  }
-  50% {
-    filter: saturate(1.28) brightness(0.98) hue-rotate(10deg);
+/* Soft blue + silver light SWIRLING inside the well (blurred, slowly rotating). */
+.site-bg::before {
+  content: '';
+  position: absolute;
+  inset: -40%;
+  background: conic-gradient(
+    from 0deg at 50% 50%,
+    rgba(16, 63, 125, 0) 0deg,
+    rgba(16, 63, 125, 0.3) 45deg,
+    rgba(142, 152, 168, 0) 90deg,
+    rgba(142, 152, 168, 0.26) 135deg,
+    rgba(16, 63, 125, 0) 180deg,
+    rgba(16, 63, 125, 0.28) 225deg,
+    rgba(142, 152, 168, 0) 270deg,
+    rgba(142, 152, 168, 0.24) 315deg,
+    rgba(16, 63, 125, 0) 360deg
+  );
+  filter: blur(72px) saturate(1.15);
+  animation: well-swirl 46s linear infinite;
+  will-change: transform;
+}
+/* Vignette — darkens the edges like the well walls, keeping the centre the focus. */
+.site-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 105% at 50% 42%, transparent 34%, rgba(2, 3, 5, 0.76) 100%);
+}
+@keyframes well-swirl {
+  to {
+    transform: rotate(360deg);
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .site-bg {
+  .site-bg::before {
     animation: none;
-    filter: saturate(1.12) brightness(0.92);
   }
 }
 
 @layer base {
+  html {
+    /* Fluid base size — scales the whole site (text, spacing, logo) up on wider
+       screens while staying compact on mobile. */
+    font-size: clamp(15.5px, 14px + 0.4vw, 19px);
+  }
   body {
     font-family: var(--font-body);
     background-color: var(--color-ink);
