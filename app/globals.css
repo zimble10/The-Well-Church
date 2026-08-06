@@ -66,51 +66,51 @@
   initial-value: 0;
 }
 
-/* ---- Chameleon backdrop (ported from the family-road-trip effect) ----
-   One fixed gradient behind the WHOLE page. Its ANGLE rotates with scroll
-   (--scroll, set by <ScrollBackdrop>), so the black / silver / blue bands sweep
-   across the viewport like paint viewed from a shifting angle; a slow shimmer
-   adds life. Recoloured to the church's three tones (no rainbow hue-cycling —
-   a small ± hue flip keeps the blue a blue). A light flat scrim protects text. */
+/* ---- "Looking down the well" backdrop ----
+   A CIRCULAR radial: pitch-black stone walls at the edges → a silver ring of wet
+   stone → a blue pool of water in the centre, with soft light SHIMMERING on the
+   pool. Fixed behind the whole page; black dominates so text stays legible. */
 .site-bg {
   position: fixed;
   inset: 0;
   z-index: -1;
   pointer-events: none;
   overflow: hidden;
-  background-color: #060708; /* black — the dominant colour (the dark well) */
+  background: radial-gradient(
+    circle at 50% 46%,
+    #1c5089 0%,
+    /* blue pool (centre) */ #22507e 13%,
+    #46505d 33%,
+    /* silver ring */ #171b22 57%,
+    #060708 78%,
+    #030304 100% /* pitch-black edge (well walls) */
+  );
 }
-/* Soft blue + silver light SWIRLING inside the well (blurred, slowly rotating). */
+/* Light shimmering within the blue pool — soft highlights that slowly drift. */
 .site-bg::before {
   content: '';
   position: absolute;
-  inset: -40%;
-  background: conic-gradient(
-    from 0deg at 50% 50%,
-    rgba(28, 96, 182, 0) 0deg,
-    rgba(28, 96, 182, 0.56) 45deg,
-    rgba(158, 170, 190, 0) 90deg,
-    rgba(158, 170, 190, 0.5) 135deg,
-    rgba(28, 96, 182, 0) 180deg,
-    rgba(28, 96, 182, 0.52) 225deg,
-    rgba(158, 170, 190, 0) 270deg,
-    rgba(158, 170, 190, 0.46) 315deg,
-    rgba(28, 96, 182, 0) 360deg
-  );
-  filter: blur(68px) saturate(1.25);
-  animation: well-swirl 88s linear infinite;
-  will-change: transform;
-}
-/* Vignette — darkens the edges like the well walls, keeping the centre the focus. */
-.site-bg::after {
-  content: '';
-  position: absolute;
   inset: 0;
-  background: radial-gradient(120% 105% at 50% 42%, transparent 38%, rgba(2, 3, 5, 0.7) 100%);
+  background:
+    radial-gradient(30% 26% at 45% 42%, rgba(150, 198, 255, 0.28), transparent 68%),
+    radial-gradient(24% 20% at 58% 52%, rgba(198, 226, 255, 0.2), transparent 70%),
+    radial-gradient(20% 17% at 52% 38%, rgba(120, 180, 255, 0.18), transparent 72%);
+  mix-blend-mode: screen;
+  animation: well-shimmer 15s ease-in-out infinite alternate;
+  will-change: transform, opacity;
 }
-@keyframes well-swirl {
-  to {
-    transform: rotate(360deg);
+@keyframes well-shimmer {
+  0% {
+    transform: translate(-2%, -1%) scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: translate(1.5%, 1%) scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(3%, -1.5%) scale(1.02);
+    opacity: 0.88;
   }
 }
 @media (prefers-reduced-motion: reduce) {
