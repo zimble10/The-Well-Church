@@ -34,9 +34,6 @@
   --font-display: var(--font-fraunces), 'Georgia', serif;
   --font-body: var(--font-newsreader), 'Georgia', serif;
   --font-mono: var(--font-jetbrains), ui-monospace, monospace;
-
-  /* -- Motion -- */
-  --animate-marquee: marquee 32s linear infinite;
 }
 
 /* --- Metallic gradient definitions (referenced by utilities below) --- */
@@ -79,6 +76,8 @@
   pointer-events: none;
   background-color: #0a0908;
   background-image:
+    /* legibility scrim — caps peak lightness so body text always clears AA */
+    linear-gradient(rgba(8, 8, 9, 0.32), rgba(8, 8, 9, 0.32)),
     /* traveling silver sheen (subtle, moves horizontally with scroll) */
     linear-gradient(115deg, transparent 43%, rgba(190, 202, 214, 0.055) 50%, transparent 57%),
     /* the metallic colour sequence the viewport scans through as you scroll */
@@ -92,9 +91,11 @@
         #0a0908 100%
       );
   background-size:
+    100% 100%,
     200% 220%,
     100% 220%;
   background-position:
+    0 0,
     calc(var(--scroll) * 100%) 50%,
     50% calc(var(--scroll) * 100%);
   background-repeat: no-repeat;
@@ -264,14 +265,37 @@
   box-shadow: var(--glow-blue);
 }
 
-/* --- Keyframes --- */
-@keyframes marquee {
-  from {
-    transform: translateX(0);
-  }
+/* --- Marquee (seamless, pixel-exact; see components/ui/marquee.tsx) --- */
+@keyframes marquee-shift {
   to {
-    transform: translateX(-50%);
+    transform: translateX(calc(var(--shift) * -1));
   }
+}
+.marquee-measure {
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+  display: inline-flex;
+  white-space: nowrap;
+}
+.marquee-track {
+  display: flex;
+  width: max-content;
+  will-change: transform;
+  animation: marquee-shift linear infinite;
+}
+.marquee-group {
+  display: flex;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.marquee-unit {
+  display: inline-flex;
+  align-items: center;
+}
+/* uniform 2rem spacing everywhere (incl. the loop seam) so joins are invisible */
+.marquee-unit > span {
+  margin-right: 2rem;
 }
 
 /* Ambient blue mesh glow, used behind hero sections */
@@ -291,8 +315,7 @@
     transform: none !important;
     transition: none;
   }
-  .animate-marquee,
-  [class*='animate-marquee'] {
+  .marquee-track {
     animation: none !important;
   }
 }
