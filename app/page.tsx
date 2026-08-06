@@ -11,6 +11,9 @@ import { church, serviceTimes, pillars, ministries, events } from '@/lib/site';
 export default function HomePage() {
   return (
     <>
+      {/* Persistent well-logo watermark — fades in on scroll, then stays centred */}
+      <StageImage src="/logo.png" />
+
       {/* ============================ HERO ============================ */}
       <section className="relative flex min-h-[92vh] items-center overflow-hidden">
         {/* Thematic well — faint background element, masked so it never crowds the text */}
@@ -62,10 +65,9 @@ export default function HomePage() {
       {/* ============================ MARQUEE ============================ */}
       <Marquee items={pillars.map((p) => p.name)} />
 
-      {/* ============================ SERVICE TIMES (staged: logo) ============================ */}
-      <section className="stage-host relative mx-auto max-w-6xl px-6 py-24">
-        <StageImage src="/logo.png" />
-        <div className="relative z-10 grid gap-12 md:grid-cols-[1fr_1.1fr] md:items-center">
+      {/* ============================ SERVICE TIMES ============================ */}
+      <section className="mx-auto max-w-6xl px-6 py-24">
+        <div className="grid gap-12 md:grid-cols-[1fr_1.1fr] md:items-center">
           <Reveal>
             <div>
               <SectionLabel index={1}>Gather With Us</SectionLabel>
@@ -124,10 +126,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ============================ 5 PILLARS (staged: pastor) ============================ */}
-      <section className="stage-host relative">
-        <StageImage src="/pastor.png" />
-        <div className="relative z-10 mx-auto max-w-6xl px-6 py-24">
+      {/* ============================ 5 PILLARS ============================ */}
+      <section>
+        <div className="mx-auto max-w-6xl px-6 py-24">
           <Reveal>
             <SectionLabel index={2}>Who We Are</SectionLabel>
             <h2 className="mt-6 max-w-3xl text-4xl sm:text-5xl">

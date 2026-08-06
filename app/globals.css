@@ -328,16 +328,10 @@
   margin-right: 2rem;
 }
 
-/* ---- Section stage image ----
-   A large, faint image tied to its section's scroll timeline. The image is
-   position:FIXED (viewport-centred), and the section's progress through the
-   viewport drives it: it rises INTO centre + fades in, holds STATIONARY at
-   centre through the middle of the section, then rises out + fades away.
-   `.stage-host` (the section) publishes the timeline; the fixed image reads it. */
-.stage-host {
-  view-timeline-name: --stage;
-  view-timeline-axis: block;
-}
+/* ---- Persistent centred watermark ----
+   A large, faint image fixed at viewport centre. Driven by the document scroll:
+   it starts hidden over the hero, rises + fades in over the first stretch of
+   scroll, then STAYS centred (held) through the rest of the page. */
 .stage-image {
   position: fixed;
   inset: 0;
@@ -346,37 +340,30 @@
   display: grid;
   place-items: center;
   opacity: 0;
-  animation: stage-inout linear both;
-  animation-timeline: --stage;
+  animation: stage-hold linear both;
+  animation-timeline: scroll(root);
+  animation-range: 3% 24%; /* fade in over this slice, then hold to page end */
 }
 .stage-image-frame {
   position: relative;
   width: min(72vw, 540px);
   aspect-ratio: 1 / 1;
 }
-@keyframes stage-inout {
-  0% {
+@keyframes stage-hold {
+  from {
     opacity: 0;
-    transform: translateY(16vh);
+    transform: translateY(12vh);
   }
-  28% {
-    opacity: 0.2;
+  to {
+    opacity: 0.16;
     transform: translateY(0);
-  }
-  72% {
-    opacity: 0.2;
-    transform: translateY(0);
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(-16vh);
   }
 }
-/* No scroll-driven-animation support: skip the effect rather than pin a static
-   full-page watermark. */
-@supports not (animation-timeline: view()) {
+/* No scroll-driven-animation support: show it as a gentle static centred mark. */
+@supports not (animation-timeline: scroll(root)) {
   .stage-image {
-    display: none;
+    opacity: 0.12;
+    animation: none;
   }
 }
 
