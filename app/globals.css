@@ -88,16 +88,16 @@
   background: conic-gradient(
     from 0deg at 50% 50%,
     rgba(28, 96, 182, 0) 0deg,
-    rgba(28, 96, 182, 0.46) 45deg,
+    rgba(28, 96, 182, 0.56) 45deg,
     rgba(158, 170, 190, 0) 90deg,
-    rgba(158, 170, 190, 0.42) 135deg,
+    rgba(158, 170, 190, 0.5) 135deg,
     rgba(28, 96, 182, 0) 180deg,
-    rgba(28, 96, 182, 0.42) 225deg,
+    rgba(28, 96, 182, 0.52) 225deg,
     rgba(158, 170, 190, 0) 270deg,
-    rgba(158, 170, 190, 0.38) 315deg,
+    rgba(158, 170, 190, 0.46) 315deg,
     rgba(28, 96, 182, 0) 360deg
   );
-  filter: blur(72px) saturate(1.2);
+  filter: blur(68px) saturate(1.25);
   animation: well-swirl 88s linear infinite;
   will-change: transform;
 }
@@ -106,7 +106,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(120% 105% at 50% 42%, transparent 34%, rgba(2, 3, 5, 0.76) 100%);
+  background: radial-gradient(120% 105% at 50% 42%, transparent 38%, rgba(2, 3, 5, 0.7) 100%);
 }
 @keyframes well-swirl {
   to {
