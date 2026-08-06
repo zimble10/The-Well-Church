@@ -67,9 +67,10 @@
 }
 
 /* ---- "Looking down the well" backdrop ----
-   A CIRCULAR radial: pitch-black stone walls at the edges → a silver ring of wet
-   stone → a blue pool of water in the centre, with soft light SHIMMERING on the
-   pool. Fixed behind the whole page; black dominates so text stays legible. */
+   A CIRCULAR radial fading pitch-BLACK at the edges (the well walls) into a BLUE
+   pool of water at the centre — no silver. Light SHIMMERS on the pool (continuous)
+   and the pool SWIRLS as you scroll (scroll-driven rotation). Fixed behind the
+   whole page; black dominates so text stays legible. */
 .site-bg {
   position: fixed;
   inset: 0;
@@ -77,44 +78,105 @@
   pointer-events: none;
   overflow: hidden;
   background: radial-gradient(
-    circle at 50% 46%,
-    #1c5089 0%,
-    /* blue pool (centre) */ #22507e 13%,
-    #46505d 33%,
-    /* silver ring */ #171b22 57%,
-    #060708 78%,
-    #030304 100% /* pitch-black edge (well walls) */
+    circle at 50% 50%,
+    #235c9c 0%,
+    #205390 12%,
+    #163f6b 30%,
+    #0d2540 46%,
+    #081420 62%,
+    #050709 80%,
+    #030304 100%
   );
 }
-/* Light shimmering within the blue pool — soft highlights that slowly drift. */
+/* Swirl inside the pool — a blurred conic of blues, masked to the centre. It
+   spins continuously but is only VISIBLE while scrolling: its opacity follows
+   `--swirl` (set by <ScrollBackdrop> from scroll velocity), so the water swirls
+   up as you scroll and settles back to just the shimmer when you stop. */
+@property --swirl {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
+}
 .site-bg::before {
   content: '';
   position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(30% 26% at 45% 42%, rgba(150, 198, 255, 0.28), transparent 68%),
-    radial-gradient(24% 20% at 58% 52%, rgba(198, 226, 255, 0.2), transparent 70%),
-    radial-gradient(20% 17% at 52% 38%, rgba(120, 180, 255, 0.18), transparent 72%);
-  mix-blend-mode: screen;
-  animation: well-shimmer 15s ease-in-out infinite alternate;
+  left: 50%;
+  top: 50%;
+  width: 150vmax;
+  height: 150vmax;
+  background: conic-gradient(
+    from 0deg,
+    rgba(38, 110, 190, 0) 0deg,
+    rgba(38, 110, 190, 0.4) 55deg,
+    rgba(70, 145, 215, 0) 120deg,
+    rgba(52, 125, 205, 0.34) 195deg,
+    rgba(38, 110, 190, 0) 250deg,
+    rgba(66, 140, 214, 0.36) 320deg,
+    rgba(38, 110, 190, 0) 360deg
+  );
+  filter: blur(70px);
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 0%, #000 20%, transparent 40%);
+  mask-image: radial-gradient(circle at 50% 50%, #000 0%, #000 20%, transparent 40%);
+  opacity: var(--swirl, 0);
+  animation: pool-spin 34s linear infinite;
   will-change: transform, opacity;
 }
-@keyframes well-shimmer {
-  0% {
-    transform: translate(-2%, -1%) scale(1);
-    opacity: 0.8;
+@keyframes pool-spin {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
   }
-  50% {
-    transform: translate(1.5%, 1%) scale(1.05);
-    opacity: 1;
-  }
-  100% {
-    transform: translate(3%, -1.5%) scale(1.02);
-    opacity: 0.88;
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
   }
 }
 @media (prefers-reduced-motion: reduce) {
   .site-bg::before {
+    animation: none;
+    opacity: 0;
+  }
+}
+/* Realistic water: soft light on the pool, rippled by an animated SVG turbulence
+   displacement (#waterDisplace, defined in layout) so it moves like caustics. */
+.site-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(30% 26% at 46% 44%, rgba(150, 198, 255, 0.3), transparent 66%),
+    radial-gradient(24% 20% at 58% 54%, rgba(198, 226, 255, 0.22), transparent 68%),
+    radial-gradient(19% 16% at 51% 39%, rgba(120, 180, 255, 0.2), transparent 70%),
+    radial-gradient(16% 30% at 40% 55%, rgba(170, 210, 255, 0.16), transparent 72%);
+  mix-blend-mode: screen;
+  filter: url(#waterDisplace);
+  animation: well-shimmer 22s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+/* Light roams to different places on the pool so the water always looks alive. */
+@keyframes well-shimmer {
+  0% {
+    transform: translate(-4%, -2%) scale(1);
+    opacity: 0.82;
+  }
+  25% {
+    transform: translate(3%, 2%) scale(1.06);
+    opacity: 1;
+  }
+  50% {
+    transform: translate(5%, -3%) scale(1.03);
+    opacity: 0.9;
+  }
+  75% {
+    transform: translate(-2%, 4%) scale(1.07);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-4%, -2%) scale(1);
+    opacity: 0.85;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .site-bg::after {
+    filter: none;
     animation: none;
   }
 }
@@ -328,10 +390,8 @@
   margin-right: 2rem;
 }
 
-/* ---- Persistent centred watermark ----
-   A large, faint image fixed at viewport centre. Driven by the document scroll:
-   it starts hidden over the hero, rises + fades in over the first stretch of
-   scroll, then STAYS centred (held) through the rest of the page. */
+/* ---- Static logo watermark ----
+   Fixed at viewport centre — sitting deep in the blue pool — always visible. */
 .stage-image {
   position: fixed;
   inset: 0;
@@ -339,32 +399,12 @@
   pointer-events: none;
   display: grid;
   place-items: center;
-  opacity: 0;
-  animation: stage-hold linear both;
-  animation-timeline: scroll(root);
-  animation-range: 3% 24%; /* fade in over this slice, then hold to page end */
+  opacity: 0.22;
 }
 .stage-image-frame {
   position: relative;
-  width: min(72vw, 540px);
+  width: min(58vmin, 440px);
   aspect-ratio: 1 / 1;
-}
-@keyframes stage-hold {
-  from {
-    opacity: 0;
-    transform: translateY(12vh);
-  }
-  to {
-    opacity: 0.16;
-    transform: translateY(0);
-  }
-}
-/* No scroll-driven-animation support: show it as a gentle static centred mark. */
-@supports not (animation-timeline: scroll(root)) {
-  .stage-image {
-    opacity: 0.12;
-    animation: none;
-  }
 }
 
 /* Ambient blue mesh glow, used behind hero sections */
