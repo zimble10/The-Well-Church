@@ -16,10 +16,28 @@ This file is the authoritative context document for all Claude agents working on
 | Stack | Next.js 16+ (App Router, Turbopack default) + Node.js 20.9+ + PostgreSQL + Tailwind CSS v4 |
 | Church Mgmt | Planning Center integration (PCO) for members, events, giving |
 | Payments | Planning Center Giving (primary) + Stripe fallback for custom flows |
-| Hosting Target | Vercel (frontend) + Railway or Supabase (backend/DB) |
+| Hosting Target | **Self-hosted: Proxmox VM = everything** (Next.js standalone + PostgreSQL via Docker Compose) · ingress via **Cloudflare Tunnel** (no open ports) · backups = nightly `pg_dump` → NAS. *(Supersedes the earlier Vercel + Railway/Supabase plan — user decision 2026-08-06.)* |
 | AI Models Used | Claude Sonnet 4.6 (implementation) \| Claude Opus 4.8 (architecture/review) |
 
 ---
+
+### 1.1 Current Delivery Phase — DEMO-FIRST (read before building)
+
+The Well Church has **not yet committed** to using this build. The immediate goal is a
+**front-end-only pitch demo** to show them — not the full application.
+
+- **Branch `demo/church-frontend`** holds the demo: a fully **static export**
+  (`output: 'export'` in `next.config.ts`) with mock content and no backend.
+- Interactive features (login, giving, member portal, contact form) are shown as styled
+  **"Coming soon"** states — never raw dead links.
+- The demo is built in the **real stack** (Next 16 + Tailwind v4), so nothing is thrown away.
+- **Design language:** editorial "warm-ink" system adapted from marketing.7lsm.com, recolored
+  to the church's brand — **bold metallic blue gradients** (`--metal-blue`) on a dark
+  `#0a0908` foundation; Fraunces (display) · Newsreader (body) · JetBrains Mono (labels).
+- **Demo hosting:** Cloudflare Pages (static) — separate from the eventual production target.
+- **Backend is FROZEN** at Phase 0.3. Do **not** build Phase 0.4+ (auth), Docker, the Tunnel,
+  or CI-to-VM until the church greenlights. When they do: remove `output: 'export'` to
+  re-enable SSR/PPR/Route Handlers, then resume the phase plan in AGENTS.md.
 
 ## 2. Model Role Assignment
 
@@ -156,7 +174,8 @@ Next.js 16 made several breaking changes from the 14/15 conventions baked into A
 | Resend / SendGrid | Transactional email | Donation receipts, welcome emails, password reset |
 | Google Analytics 4 | Public site analytics | No tracking in members portal without consent |
 | Cloudinary / Next.js Image | Media management | Sermon thumbnails, event photos, staff directory — use `images.remotePatterns`, not `images.domains` |
-| Vercel | Hosting + Proxy (`proxy.ts`, Node.js runtime) | Edge Config for feature flags; ISR for sermon/event pages — requires explicit `fetch`/route cache opt-in (Next 16 caches nothing by default) |
+| Self-hosted Proxmox VM | Hosting (Next.js standalone Node server) + Proxy (`proxy.ts`, Node.js runtime) | Docker Compose (`web` + `db`); feature flags via env/DB (no Edge Config); ISR for sermon/event pages — requires explicit `fetch`/route cache opt-in (Next 16 caches nothing by default) |
+| Cloudflare Tunnel | Public ingress + TLS | `cloudflared` dials out — no exposed ports; pairs with the Turnstile bot-protection in §3.2 |
 
 ---
 

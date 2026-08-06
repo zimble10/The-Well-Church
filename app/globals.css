@@ -1,26 +1,248 @@
 @import 'tailwindcss';
 
+/* ==========================================================================
+   THE WELL CHURCH — design system
+   Editorial "warm ink" foundation (adapted from the 7LSM system) recolored to
+   the church's brand: bold metallic BLUE gradients as the signature accent.
+   Fonts: Fraunces (display) · Newsreader (body) · JetBrains Mono (labels).
+   ========================================================================== */
+
+@theme {
+  /* -- Foundation: warm near-black ink -- */
+  --color-ink: #0a0908;
+  --color-ink-soft: #14110f;
+  --color-ink-line: #221c14;
+  --color-ink-card: #100d0b;
+
+  /* -- "Paper": warm cream text -- */
+  --color-paper: #e8e0d3;
+  --color-paper-muted: #968a76;
+  --color-paper-dim: #5f5644;
+
+  /* -- Church blue, as a metallic ramp (highlight -> brand -> steel) -- */
+  --color-blue-100: #eaf7fd;
+  --color-blue-200: #bfe6f8;
+  --color-blue-300: #8fd3f1;
+  --color-blue-400: #6bc2ea;
+  --color-blue-500: #4eaede; /* brand core */
+  --color-blue-600: #2f93c9;
+  --color-blue-700: #1f7bb0;
+  --color-blue-800: #145b81;
+  --color-blue-900: #0d3f5b;
+
+  /* -- Type (mapped to the next/font CSS variables set in layout.tsx) -- */
+  --font-display: var(--font-fraunces), 'Georgia', serif;
+  --font-body: var(--font-newsreader), 'Georgia', serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+
+  /* -- Motion -- */
+  --animate-marquee: marquee 32s linear infinite;
+}
+
+/* --- Metallic gradient definitions (referenced by utilities below) --- */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --metal-blue: linear-gradient(
+    170deg,
+    #eaf7fd 0%,
+    #a9def5 20%,
+    #4eaede 44%,
+    #1f7bb0 58%,
+    #4eaede 74%,
+    #cfeefb 100%
+  );
+  --metal-blue-cta: linear-gradient(180deg, #8fd3f1 0%, #4eaede 42%, #1f7bb0 100%);
+  --metal-hairline: linear-gradient(
+    90deg,
+    transparent,
+    #4eaede 20%,
+    #8fd3f1 50%,
+    #4eaede 80%,
+    transparent
+  );
+  --glow-blue: 0 0 44px -8px rgba(78, 174, 222, 0.45);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+@layer base {
+  body {
+    font-family: var(--font-body);
+    background-color: var(--color-ink);
+    color: var(--color-paper);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.02;
+    text-wrap: balance;
+  }
+
+  ::selection {
+    background: rgba(78, 174, 222, 0.28);
+    color: #fff;
+  }
+
+  /* Themed scrollbar to complete the "designed" feel */
+  * {
+    scrollbar-color: var(--color-ink-line) var(--color-ink);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer utilities {
+  /* Metallic blue text (bold, chrome-like) — for display headings & accents */
+  .text-metal {
+    background: var(--metal-blue);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    /* faint edge so thin serif strokes still read on dark */
+    filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.35));
+  }
+
+  /* Metallic blue fill (badges, rules, icons) */
+  .bg-metal {
+    background: var(--metal-blue);
+  }
+
+  .metal-hairline {
+    height: 1px;
+    background: var(--metal-hairline);
+  }
+
+  /* Mono section label: “§ 01 — WHO WE ARE” */
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--color-blue-300);
+  }
+
+  /* Primary CTA — metallic, with top sheen + glow */
+  .btn-metal {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.85rem 1.5rem;
+    border-radius: 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #041520;
+    background: var(--metal-blue-cta);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.55),
+      var(--glow-blue);
+    transition:
+      transform 0.18s ease,
+      box-shadow 0.25s ease,
+      filter 0.25s ease;
+  }
+  .btn-metal:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.06);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.65),
+      0 0 60px -6px rgba(78, 174, 222, 0.6);
+  }
+
+  /* Ghost CTA — hairline outline in blue */
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.85rem 1.5rem;
+    border-radius: 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-paper);
+    border: 1px solid var(--color-ink-line);
+    transition:
+      border-color 0.25s ease,
+      color 0.25s ease,
+      transform 0.18s ease;
+  }
+  .btn-ghost:hover {
+    border-color: var(--color-blue-500);
+    color: var(--color-blue-200);
+    transform: translateY(-2px);
+  }
+
+  /* Card surface */
+  .card {
+    background: linear-gradient(180deg, var(--color-ink-card), var(--color-ink));
+    border: 1px solid var(--color-ink-line);
+    border-radius: 0.85rem;
+  }
+
+  /* Subtle top-lit hairline used inside cards/sections */
+  .rule-soft {
+    border-top: 1px solid var(--color-ink-line);
+  }
+
+  /* Scroll-reveal. Visible by DEFAULT (SSR / no-JS / crawlers see content).
+     Only armed to opacity:0 when scripting is enabled, then .is-visible fades
+     it up via the IntersectionObserver in <Reveal>. */
+  .reveal {
+    transition:
+      opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @media (scripting: enabled) {
+    .reveal {
+      opacity: 0;
+      transform: translateY(18px);
+    }
+    .reveal.is-visible {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
+/* Registered as a utility so `hover:glow-blue` (and other variants) generate. */
+@utility glow-blue {
+  box-shadow: var(--glow-blue);
+}
+
+/* --- Keyframes --- */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* Ambient blue mesh glow, used behind hero sections */
+.mesh-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(60% 50% at 72% 12%, rgba(78, 174, 222, 0.16), transparent 60%),
+    radial-gradient(45% 40% at 12% 88%, rgba(31, 123, 176, 0.14), transparent 60%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .reveal.is-visible {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none;
+  }
+  .animate-marquee,
+  [class*='animate-marquee'] {
+    animation: none !important;
+  }
 }
