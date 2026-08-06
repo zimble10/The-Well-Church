@@ -3,6 +3,7 @@ import { Fraunces, Newsreader, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { SiteHeader } from '@/components/layout/site-header';
 import { SiteFooter } from '@/components/layout/site-footer';
+import { ScrollBackdrop } from '@/components/ui/scroll-backdrop';
 
 // Display serif — high-contrast, characterful (headings, hero).
 const fraunces = Fraunces({
@@ -57,6 +58,7 @@ export default function RootLayout({
       className={`${fraunces.variable} ${newsreader.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="bg-ink text-paper flex min-h-full flex-col">
+        <ScrollBackdrop />
         <SiteHeader />
         {/* overflow-x-clip: safety net so no section can cause horizontal scroll */}
         <main className="flex-1 overflow-x-clip">{children}</main>
