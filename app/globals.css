@@ -354,7 +354,7 @@
   pointer-events: none;
   display: grid;
   place-items: center;
-  opacity: 0.22;
+  opacity: 0.6; /* solid enough that ripples emerge from BEHIND it, not through it */
 }
 .stage-image-frame {
   position: relative;

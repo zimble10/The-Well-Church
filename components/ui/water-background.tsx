@@ -8,15 +8,18 @@ type StartRipples = (canvas: HTMLCanvasElement, cfg: Record<string, unknown>) =>
 /** Water tuned to the well: dark-blue pool, gentle ambient ripples, light glints. */
 const CONFIG: Record<string, unknown> = {
   resolution: 512,
-  damping: 0.996,
+  damping: 0.997, // high → soft, slow-rolling ripples that persist
   deep: [0.01, 0.035, 0.075],
-  shallow: [0.05, 0.14, 0.25],
-  lightPos: [0.5, 0.4],
-  cursorRadius: 0.02,
+  shallow: [0.06, 0.17, 0.3],
+  lightPos: [0.5, 0.5],
+  // Gentle rings from the centre (behind the logo), softly expanding outward.
+  centerX: 0.5,
+  centerY: 0.5,
+  dropRadius: 0.055,
+  dropStrength: 0.11,
+  dropInterval: 900,
+  cursorRadius: 0.035,
   cursorStrength: 0.06,
-  ambRadius: 0.016,
-  ambStrength: 0.045,
-  ambInterval: 450, // frequent + low damping → the surface is always rippling
 };
 
 /**

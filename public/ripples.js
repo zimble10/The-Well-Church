@@ -61,19 +61,22 @@ window.startRipples = function (canvas, cfg) {
 
   var RENDER =
     '#version 300 es\nprecision highp float; in vec2 v; out vec4 o;\n' +
-    'uniform sampler2D u; uniform vec2 texel; uniform vec3 deep; uniform vec3 shallow; uniform vec2 lightPos;\n' +
+    'uniform sampler2D u; uniform vec2 texel; uniform vec3 deep; uniform vec3 shallow; uniform vec2 lightPos; uniform float aspect;\n' +
     'void main(){\n' +
-    '  float hx=texture(u,v+vec2(texel.x,0.)).x - texture(u,v-vec2(texel.x,0.)).x;\n' +
-    '  float hy=texture(u,v+vec2(0.,texel.y)).x - texture(u,v-vec2(0.,texel.y)).x;\n' +
-    '  vec3 n=normalize(vec3(-hx*9.0, -hy*9.0, 1.0));\n' +
+    // sample the SQUARE sim into a centred square so ripples stay full circles
+    '  vec2 s = vec2((v.x-0.5)*aspect + 0.5, v.y);\n' +
+    '  if (s.x < 0.0 || s.x > 1.0) { o = vec4(0.0); return; }\n' +
+    '  float hx=texture(u,s+vec2(texel.x,0.)).x - texture(u,s-vec2(texel.x,0.)).x;\n' +
+    '  float hy=texture(u,s+vec2(0.,texel.y)).x - texture(u,s-vec2(0.,texel.y)).x;\n' +
+    '  vec3 n=normalize(vec3(-hx*18.0, -hy*18.0, 1.0));\n' +
     '  vec3 L=normalize(vec3(0.30,0.40,0.87));\n' +
     '  float diff=clamp(dot(n,L),0.0,1.0);\n' +
-    '  float spec=pow(clamp(dot(reflect(-L,n), vec3(0.,0.,1.)),0.0,1.0), 90.0);\n' +
-    '  vec2 ruv = v + n.xy*0.08;\n' +
-    '  float glow = smoothstep(0.5, 0.0, distance(ruv, lightPos))*0.14;\n' +
-    '  vec3 col = mix(deep, shallow, diff*diff);\n' +
+    '  float spec=pow(clamp(dot(reflect(-L,n), vec3(0.,0.,1.)),0.0,1.0), 60.0);\n' +
+    '  vec2 ruv = s + n.xy*0.12;\n' +
+    '  float glow = smoothstep(0.55, 0.0, distance(ruv, lightPos))*0.16;\n' +
+    '  vec3 col = mix(deep, shallow, diff);\n' +
     '  col += glow * vec3(0.34,0.46,0.66);\n' +
-    '  col += spec * vec3(0.72,0.84,1.0)*0.9;\n' +
+    '  col += spec * vec3(0.82,0.91,1.0);\n' +
     '  o=vec4(col, 1.0);\n' +
     '}';
 
@@ -178,6 +181,7 @@ window.startRipples = function (canvas, cfg) {
     gl.uniform3f(U(pRender, 'deep'), deep[0], deep[1], deep[2]);
     gl.uniform3f(U(pRender, 'shallow'), shallow[0], shallow[1], shallow[2]);
     gl.uniform2f(U(pRender, 'lightPos'), lightPos[0], lightPos[1]);
+    gl.uniform1f(U(pRender, 'aspect'), canvas.width / canvas.height);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
 
@@ -190,10 +194,11 @@ window.startRipples = function (canvas, cfg) {
   window.addEventListener('resize', resize);
 
   var running = true;
+  var cx = cfg.centerX != null ? cfg.centerX : 0.5;
+  var cy = cfg.centerY != null ? cfg.centerY : 0.5;
   function frame() {
     if (!running) return;
-    step();
-    step();
+    step(); // one step/frame → gentle, slow-rolling propagation
     render();
     requestAnimationFrame(frame);
   }
@@ -204,17 +209,20 @@ window.startRipples = function (canvas, cfg) {
   }
   function onMove(e) {
     var uv = toUV(e);
-    if (uv[0] < -0.1 || uv[0] > 1.1 || uv[1] < -0.1 || uv[1] > 1.1) return;
-    drop(uv[0], uv[1], cfg.cursorRadius || 0.028, cfg.cursorStrength || 0.05);
+    var aspect = canvas.width / canvas.height;
+    var sx = (uv[0] - 0.5) * aspect + 0.5; // map cursor into the centred square
+    if (sx < 0.0 || sx > 1.0 || uv[1] < 0.0 || uv[1] > 1.0) return;
+    drop(sx, uv[1], cfg.cursorRadius || 0.03, cfg.cursorStrength || 0.06);
   }
   window.addEventListener('mousemove', onMove);
 
-  // Seed several rings + keep gentle ambient drops so the pool always ripples.
-  for (var i = 0; i < 10; i++)
-    drop(Math.random(), Math.random() * 0.6 + 0.25, cfg.ambRadius || 0.018, (cfg.ambStrength || 0.05) * 1.5);
+  // Gentle rings from the centre (behind the logo), softly expanding outward.
+  var dropRadius = cfg.dropRadius || 0.05;
+  var dropStrength = cfg.dropStrength || 0.12;
+  for (var i = 0; i < 2; i++) drop(cx, cy, dropRadius, dropStrength);
   var amb = setInterval(function () {
-    if (running) drop(Math.random(), Math.random() * 0.6 + 0.25, cfg.ambRadius || 0.018, cfg.ambStrength || 0.05);
-  }, cfg.ambInterval || 1100);
+    if (running) drop(cx, cy, dropRadius, dropStrength);
+  }, cfg.dropInterval || 900);
 
   requestAnimationFrame(frame);
 
