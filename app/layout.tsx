@@ -4,6 +4,7 @@ import './globals.css';
 import { SiteHeader } from '@/components/layout/site-header';
 import { SiteFooter } from '@/components/layout/site-footer';
 import { ScrollBackdrop } from '@/components/ui/scroll-backdrop';
+import { FluidBackground } from '@/components/ui/fluid-background';
 
 // Display serif — high-contrast, characterful (headings, hero).
 const fraunces = Fraunces({
@@ -58,34 +59,8 @@ export default function RootLayout({
       className={`${fraunces.variable} ${newsreader.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="bg-ink text-paper flex min-h-full flex-col">
-        {/* Animated turbulence that ripples the pool's light like water caustics */}
-        <svg aria-hidden width="0" height="0" style={{ position: 'absolute' }}>
-          <filter id="waterDisplace" x="-30%" y="-30%" width="160%" height="160%">
-            <feTurbulence
-              type="fractalNoise"
-              baseFrequency="0.010 0.018"
-              numOctaves={2}
-              seed={5}
-              result="turb"
-            >
-              <animate
-                attributeName="baseFrequency"
-                dur="26s"
-                values="0.010 0.018;0.016 0.011;0.010 0.018"
-                repeatCount="indefinite"
-              />
-              <animate attributeName="seed" dur="48s" values="1;18;1" repeatCount="indefinite" />
-            </feTurbulence>
-            <feDisplacementMap
-              in="SourceGraphic"
-              in2="turb"
-              scale={55}
-              xChannelSelector="R"
-              yChannelSelector="G"
-            />
-          </filter>
-        </svg>
         <ScrollBackdrop />
+        <FluidBackground />
         <SiteHeader />
         {/* overflow-x-clip: safety net so no section can cause horizontal scroll */}
         <main className="flex-1 overflow-x-clip">{children}</main>

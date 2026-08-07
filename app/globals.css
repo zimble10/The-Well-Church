@@ -59,126 +59,81 @@
   --glow-blue: 0 0 44px -8px rgba(78, 174, 222, 0.45);
 }
 
-/* Scroll progress (0→1), written by <ScrollBackdrop>; drives the metallic backdrop. */
-@property --scroll {
-  syntax: '<number>';
-  inherits: true;
-  initial-value: 0;
-}
-
-/* ---- "Looking down the well" backdrop ----
-   A CIRCULAR radial fading pitch-BLACK at the edges (the well walls) into a BLUE
-   pool of water at the centre — no silver. Light SHIMMERS on the pool (continuous)
-   and the pool SWIRLS as you scroll (scroll-driven rotation). Fixed behind the
-   whole page; black dominates so text stays legible. */
+/* ---- The well pool (CSS base + fallback) ----
+   A circular radial: pitch-black walls at the edges → a blue pool at the centre.
+   On desktop the interactive WebGL fluid (<FluidBackground> → .fluid-canvas) renders
+   the live water on top of this; on mobile / touch / reduced-motion / no-WebGL, this
+   CSS pool with a gentle drifting shimmer is what shows. Black dominates so text
+   stays legible. */
 .site-bg {
   position: fixed;
   inset: 0;
-  z-index: -1;
+  z-index: -3;
   pointer-events: none;
   overflow: hidden;
   background: radial-gradient(
     circle at 50% 50%,
-    #235c9c 0%,
-    #205390 12%,
-    #163f6b 30%,
-    #0d2540 46%,
-    #081420 62%,
-    #050709 80%,
-    #030304 100%
+    #1d4f86 0%,
+    #17406d 16%,
+    #0f2b49 32%,
+    #0a1a2c 48%,
+    #060c15 66%,
+    #030405 84%,
+    #020203 100%
   );
 }
-/* Swirl inside the pool — a blurred conic of blues, masked to the centre. It
-   spins continuously but is only VISIBLE while scrolling: its opacity follows
-   `--swirl` (set by <ScrollBackdrop> from scroll velocity), so the water swirls
-   up as you scroll and settles back to just the shimmer when you stop. */
-@property --swirl {
-  syntax: '<number>';
-  inherits: true;
-  initial-value: 0;
-}
-.site-bg::before {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 150vmax;
-  height: 150vmax;
-  background: conic-gradient(
-    from 0deg,
-    rgba(38, 110, 190, 0) 0deg,
-    rgba(38, 110, 190, 0.4) 55deg,
-    rgba(70, 145, 215, 0) 120deg,
-    rgba(52, 125, 205, 0.34) 195deg,
-    rgba(38, 110, 190, 0) 250deg,
-    rgba(66, 140, 214, 0.36) 320deg,
-    rgba(38, 110, 190, 0) 360deg
-  );
-  filter: blur(70px);
-  -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 0%, #000 20%, transparent 40%);
-  mask-image: radial-gradient(circle at 50% 50%, #000 0%, #000 20%, transparent 40%);
-  opacity: var(--swirl, 0);
-  animation: pool-spin 34s linear infinite;
-  will-change: transform, opacity;
-}
-@keyframes pool-spin {
-  from {
-    transform: translate(-50%, -50%) rotate(0deg);
-  }
-  to {
-    transform: translate(-50%, -50%) rotate(360deg);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .site-bg::before {
-    animation: none;
-    opacity: 0;
-  }
-}
-/* Realistic water: soft light on the pool, rippled by an animated SVG turbulence
-   displacement (#waterDisplace, defined in layout) so it moves like caustics. */
+/* Gentle drifting shimmer (cheap, no filter) — the calm fallback water. */
 .site-bg::after {
   content: '';
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(30% 26% at 46% 44%, rgba(150, 198, 255, 0.3), transparent 66%),
-    radial-gradient(24% 20% at 58% 54%, rgba(198, 226, 255, 0.22), transparent 68%),
-    radial-gradient(19% 16% at 51% 39%, rgba(120, 180, 255, 0.2), transparent 70%),
-    radial-gradient(16% 30% at 40% 55%, rgba(170, 210, 255, 0.16), transparent 72%);
+    radial-gradient(28% 24% at 46% 44%, rgba(150, 198, 255, 0.22), transparent 66%),
+    radial-gradient(22% 18% at 58% 54%, rgba(198, 226, 255, 0.16), transparent 68%),
+    radial-gradient(18% 15% at 51% 39%, rgba(120, 180, 255, 0.16), transparent 70%);
   mix-blend-mode: screen;
-  filter: url(#waterDisplace);
-  animation: well-shimmer 22s ease-in-out infinite;
+  animation: well-shimmer 20s ease-in-out infinite;
   will-change: transform, opacity;
 }
-/* Light roams to different places on the pool so the water always looks alive. */
 @keyframes well-shimmer {
   0% {
     transform: translate(-4%, -2%) scale(1);
-    opacity: 0.82;
+    opacity: 0.7;
   }
   25% {
     transform: translate(3%, 2%) scale(1.06);
-    opacity: 1;
+    opacity: 0.95;
   }
   50% {
     transform: translate(5%, -3%) scale(1.03);
-    opacity: 0.9;
+    opacity: 0.8;
   }
   75% {
     transform: translate(-2%, 4%) scale(1.07);
-    opacity: 1;
+    opacity: 0.95;
   }
   100% {
     transform: translate(-4%, -2%) scale(1);
-    opacity: 0.85;
+    opacity: 0.75;
   }
 }
 @media (prefers-reduced-motion: reduce) {
   .site-bg::after {
-    filter: none;
     animation: none;
   }
+}
+
+/* Interactive WebGL water, masked to the circular pool (edges reveal the black
+   walls behind). Above the CSS pool, below the logo + content. */
+.fluid-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 0%, #000 32%, transparent 52%);
+  mask-image: radial-gradient(circle at 50% 50%, #000 0%, #000 32%, transparent 52%);
 }
 
 @layer base {

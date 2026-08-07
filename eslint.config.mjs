@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     'out/**',
     'build/**',
     'next-env.d.ts',
+    // Vendored third-party script (WebGL fluid sim) — see NOTICE.md
+    'public/**',
   ]),
 ]);
 
