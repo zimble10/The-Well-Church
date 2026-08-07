@@ -196,9 +196,12 @@ window.startRipples = function (canvas, cfg) {
   var running = true;
   var cx = cfg.centerX != null ? cfg.centerX : 0.5;
   var cy = cfg.centerY != null ? cfg.centerY : 0.5;
+  var stepEvery = cfg.stepEvery || 3; // sim step once per N frames → slower outward travel
+  var _f = 0;
   function frame() {
     if (!running) return;
-    step(); // one step/frame → gentle, slow-rolling propagation
+    _f++;
+    if (_f % stepEvery === 0) step(); // propagate 1/stepEvery as fast (gentle roll)
     render();
     requestAnimationFrame(frame);
   }
