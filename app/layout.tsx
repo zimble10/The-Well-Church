@@ -4,7 +4,7 @@ import './globals.css';
 import { SiteHeader } from '@/components/layout/site-header';
 import { SiteFooter } from '@/components/layout/site-footer';
 import { ScrollBackdrop } from '@/components/ui/scroll-backdrop';
-import { FluidBackground } from '@/components/ui/fluid-background';
+import { WaterBackground } from '@/components/ui/water-background';
 
 // Display serif — high-contrast, characterful (headings, hero).
 const fraunces = Fraunces({
@@ -60,7 +60,7 @@ export default function RootLayout({
     >
       <body className="bg-ink text-paper flex min-h-full flex-col">
         <ScrollBackdrop />
-        <FluidBackground />
+        <WaterBackground />
         <SiteHeader />
         {/* overflow-x-clip: safety net so no section can cause horizontal scroll */}
         <main className="flex-1 overflow-x-clip">{children}</main>

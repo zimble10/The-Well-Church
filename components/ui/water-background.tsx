@@ -2,34 +2,29 @@
 
 import { useEffect, useRef } from 'react';
 
-type FluidController = { pause: () => void; resume: () => void; destroy: () => void };
-type StartFluid = (canvas: HTMLCanvasElement, cfg: Record<string, unknown>) => FluidController;
+type Controller = { pause: () => void; resume: () => void; destroy: () => void };
+type StartRipples = (canvas: HTMLCanvasElement, cfg: Record<string, unknown>) => Controller;
 
-/** Tuned to the church palette: dark-blue pool, blue/silver splats, calm flow. */
+/** Water tuned to the well: dark-blue pool, gentle ambient ripples, light glints. */
 const CONFIG: Record<string, unknown> = {
-  BACK_COLOR: { r: 5, g: 14, b: 30 },
-  TRANSPARENT: false,
-  COLORFUL: false,
-  SHADING: true,
-  BLOOM: true,
-  BLOOM_INTENSITY: 0.6,
-  SUNRAYS: true,
-  SUNRAYS_WEIGHT: 0.8,
-  CURL: 22,
-  DENSITY_DISSIPATION: 1.4,
-  VELOCITY_DISSIPATION: 0.3,
-  SPLAT_RADIUS: 0.2,
-  SIM_RESOLUTION: 128,
-  DYE_RESOLUTION: 768,
+  resolution: 512,
+  damping: 0.996,
+  deep: [0.01, 0.035, 0.075],
+  shallow: [0.05, 0.14, 0.25],
+  lightPos: [0.5, 0.4],
+  cursorRadius: 0.02,
+  cursorStrength: 0.06,
+  ambRadius: 0.016,
+  ambStrength: 0.045,
+  ambInterval: 450, // frequent + low damping → the surface is always rippling
 };
 
 /**
- * Interactive WebGL water in the well's pool — PavelDoGreat's fluid simulation
- * (MIT, see NOTICE), adapted in /public/fluid.js. DESKTOP ONLY: mobile, touch,
- * and reduced-motion users get the CSS pool instead. Pauses while the tab is
- * hidden to save the GPU.
+ * Interactive WebGL water ripples in the well's pool (custom heightfield sim in
+ * /public/ripples.js). DESKTOP ONLY — mobile / touch / reduced-motion / no-WebGL2
+ * fall back to the CSS pool. Pauses while the tab is hidden.
  */
-export function FluidBackground() {
+export function WaterBackground() {
   const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -39,41 +34,41 @@ export function FluidBackground() {
     const desktop =
       window.matchMedia('(hover: hover) and (pointer: fine)').matches && window.innerWidth >= 1024;
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (!desktop || reduce) return; // → CSS fallback pool
+    if (!desktop || reduce) return;
 
-    let controller: FluidController | undefined;
+    let controller: Controller | undefined;
     let cancelled = false;
 
     const loadScript = () =>
       new Promise<void>((resolve, reject) => {
-        if (typeof (window as unknown as { startFluid?: unknown }).startFluid === 'function') {
+        if (typeof (window as unknown as { startRipples?: unknown }).startRipples === 'function') {
           resolve();
           return;
         }
-        const existing = document.querySelector<HTMLScriptElement>('script[data-fluid]');
+        const existing = document.querySelector<HTMLScriptElement>('script[data-ripples]');
         if (existing) {
           existing.addEventListener('load', () => resolve());
-          existing.addEventListener('error', () => reject(new Error('fluid')));
+          existing.addEventListener('error', () => reject(new Error('ripples')));
           return;
         }
         const s = document.createElement('script');
-        s.src = '/fluid.js';
+        s.src = '/ripples.js';
         s.async = true;
-        s.dataset.fluid = 'true';
+        s.dataset.ripples = 'true';
         s.onload = () => resolve();
-        s.onerror = () => reject(new Error('fluid'));
+        s.onerror = () => reject(new Error('ripples'));
         document.body.appendChild(s);
       });
 
     loadScript()
       .then(() => {
         if (cancelled) return;
-        const start = (window as unknown as { startFluid?: StartFluid }).startFluid;
+        const start = (window as unknown as { startRipples?: StartRipples }).startRipples;
         if (typeof start !== 'function') return;
         try {
           controller = start(canvas, CONFIG);
         } catch {
-          /* no WebGL → canvas stays blank, CSS pool shows through */
+          /* no WebGL2 → CSS pool shows through */
         }
       })
       .catch(() => {});
