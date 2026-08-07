@@ -354,7 +354,26 @@
   pointer-events: none;
   display: grid;
   place-items: center;
-  opacity: 0.6; /* solid enough that ripples emerge from BEHIND it, not through it */
+  opacity: 0;
+  /* Fades in with scroll: invisible near the top, full brightness ~half a
+     viewport down. Solid at full so ripples emerge from BEHIND it. */
+  animation: logo-fade linear both;
+  animation-timeline: scroll(root);
+  animation-range: 4vh 44vh;
+}
+@keyframes logo-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 0.6;
+  }
+}
+@supports not (animation-timeline: scroll(root)) {
+  .stage-image {
+    opacity: 0.6;
+    animation: none;
+  }
 }
 .stage-image-frame {
   position: relative;
