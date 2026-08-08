@@ -10,12 +10,15 @@ export function SiteFooter() {
           {/* Brand + address */}
           <div>
             <Link href="/" className="flex items-center gap-3">
+              {/* Same treatment as the header: no ring, and the solid #000 disc
+                  feathered into the background instead of ending at a hard
+                  circular edge. Size left alone — only the header mark grows. */}
               <Image
                 src="/logo.png"
                 alt="The Well Church"
                 width={48}
                 height={48}
-                className="h-12 w-12 rounded-full ring-1 ring-blue-800/40"
+                className="h-12 w-12 [mask-image:radial-gradient(circle,#000_68%,transparent_86%)]"
               />
               <span className="font-display text-xl">The Well Church</span>
             </Link>
