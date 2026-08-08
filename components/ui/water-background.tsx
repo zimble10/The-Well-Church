@@ -1,13 +1,18 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
-type Controller = { pause: () => void; resume: () => void; destroy: () => void };
+type Controller = {
+  pause: () => void;
+  resume: () => void;
+  destroy: () => void;
+  mode: 'webgl' | 'canvas' | 'none';
+  reason: string | null;
+};
 type StartRipples = (canvas: HTMLCanvasElement, cfg: Record<string, unknown>) => Controller;
 
 /** Water tuned to the well: dark-blue pool, gentle ambient ripples, light glints. */
-const CONFIG: Record<string, unknown> = {
-  resolution: 512,
+const BASE: Record<string, unknown> = {
   damping: 0.997, // high → soft, slow-rolling ripples that persist
   deep: [0.01, 0.035, 0.075],
   shallow: [0.06, 0.17, 0.3],
@@ -23,21 +28,57 @@ const CONFIG: Record<string, unknown> = {
 };
 
 /**
- * Interactive WebGL water ripples in the well's pool (custom heightfield sim in
- * /public/ripples.js). DESKTOP ONLY — mobile / touch / reduced-motion / no-WebGL2
- * fall back to the CSS pool. Pauses while the tab is hidden.
+ * Simulation cost scales with resolution² × devicePixelRatio², so a phone gets a
+ * smaller grid and a lower pixel cap rather than being switched off entirely.
+ * A 3× DPR phone rendering a 512² sim at full density is what made this feel
+ * like it had to be desktop-only; it never did.
+ */
+function tuneForDevice(): Record<string, unknown> {
+  const w = window.innerWidth;
+  const coarse = window.matchMedia('(pointer: coarse)').matches;
+  const cores = navigator.hardwareConcurrency ?? 4;
+  const lowEnd = cores <= 4;
+
+  if (coarse || w < 768) {
+    return { resolution: lowEnd ? 192 : 256, dprCap: 1.25, maxFps: 30, stepEvery: 2 };
+  }
+  if (w < 1280) {
+    return { resolution: 384, dprCap: 1.5, maxFps: 60, stepEvery: 3 };
+  }
+  return { resolution: lowEnd ? 384 : 512, dprCap: 2, stepEvery: 3 };
+}
+
+/**
+ * Interactive WebGL water ripples in the well's pool (heightfield sim in
+ * /public/ripples.js), with a 2D ring fallback for devices without WebGL2 or
+ * float render targets.
+ *
+ * This runs on EVERY device, phones included — only `prefers-reduced-motion`
+ * opts out. It previously required a fine pointer and a ≥1024px window, which
+ * silently excluded every phone and tablet from the site's signature element.
+ *
+ * Append `?water=debug` to any URL to see which path the device took.
  */
 export function WaterBackground() {
   const ref = useRef<HTMLCanvasElement>(null);
+  const [debug, setDebug] = useState<string | null>(null);
 
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas || typeof window.matchMedia !== 'function') return;
 
-    const desktop =
-      window.matchMedia('(hover: hover) and (pointer: fine)').matches && window.innerWidth >= 1024;
+    const wantsDebug = new URLSearchParams(window.location.search).get('water') === 'debug';
+    // Deferred so the overlay never sets state synchronously inside the effect;
+    // every other report already arrives via an async callback.
+    const report = (msg: string) => {
+      if (wantsDebug) queueMicrotask(() => setDebug(msg));
+    };
+
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (!desktop || reduce) return;
+    if (reduce) {
+      report('off · prefers-reduced-motion');
+      return;
+    }
 
     let controller: Controller | undefined;
     let cancelled = false;
@@ -69,12 +110,23 @@ export function WaterBackground() {
         const start = (window as unknown as { startRipples?: StartRipples }).startRipples;
         if (typeof start !== 'function') return;
         try {
-          controller = start(canvas, CONFIG);
+          controller = start(canvas, { ...BASE, ...tuneForDevice() });
+          if (controller) {
+            const cfg = tuneForDevice();
+            report(
+              `${controller.mode} · ${controller.reason ?? '—'} · sim ${cfg.resolution} · dpr ` +
+                `${Math.min(window.devicePixelRatio || 1, Number(cfg.dprCap)).toFixed(2)} · ` +
+                `${window.innerWidth}×${window.innerHeight}`,
+            );
+          }
         } catch {
           /* no WebGL2 → CSS pool shows through */
+          report('threw during start');
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        report('ripples.js failed to load');
+      });
 
     const onVisibility = () => {
       if (!controller) return;
@@ -90,5 +142,14 @@ export function WaterBackground() {
     };
   }, []);
 
-  return <canvas ref={ref} className="fluid-canvas" aria-hidden />;
+  return (
+    <>
+      <canvas ref={ref} className="fluid-canvas" aria-hidden />
+      {debug ? (
+        <output className="fixed bottom-2 left-2 z-50 rounded bg-black/80 px-2 py-1 font-mono text-[11px] text-blue-200">
+          water: {debug}
+        </output>
+      ) : null}
+    </>
+  );
 }

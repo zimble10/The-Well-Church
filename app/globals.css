@@ -61,10 +61,11 @@
 
 /* ---- The well pool (CSS base + fallback) ----
    A circular radial: pitch-black walls at the edges → a blue pool at the centre.
-   On desktop the interactive WebGL fluid (<FluidBackground> → .fluid-canvas) renders
-   the live water on top of this; on mobile / touch / reduced-motion / no-WebGL, this
-   CSS pool with a gentle drifting shimmer is what shows. Black dominates so text
-   stays legible. */
+   <WaterBackground> → .fluid-canvas renders live water on top of this on every
+   device that can animate at all — the WebGL heightfield where float render
+   targets exist, a 2D ring animation where they do not. This CSS pool is the
+   floor beneath both, and all that shows under prefers-reduced-motion. Black
+   dominates so text stays legible. */
 .site-bg {
   position: fixed;
   inset: 0;
@@ -123,8 +124,10 @@
   }
 }
 
-/* Interactive WebGL water, masked to the circular pool (edges reveal the black
-   walls behind). Above the CSS pool, below the logo + content. */
+/* Interactive water (WebGL or 2D fallback), masked to the circular pool (edges
+   reveal the black walls behind). Above the CSS pool, below the logo + content.
+   pointer-events stay off: input is read from window listeners, so the canvas
+   never intercepts a scroll or a tap on a link. */
 .fluid-canvas {
   position: fixed;
   inset: 0;
