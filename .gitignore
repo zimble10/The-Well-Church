@@ -48,3 +48,6 @@ next-env.d.ts
 # session handoff notes (ephemeral, not part of the project)
 /HANDOFF.md
 
+
+# Claude Code session scratch
+.claude/scheduled_tasks.lock
