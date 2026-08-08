@@ -104,11 +104,18 @@ window.startRipples = function (canvas, cfg) {
     '#version 300 es\n' +
     PRECISION +
     'in vec2 v; out vec4 o;\n' +
-    'uniform sampler2D u; uniform vec2 texel; uniform vec3 deep; uniform vec3 shallow; uniform vec2 lightPos; uniform float aspect;\n' +
+    'uniform sampler2D u; uniform vec2 texel; uniform vec3 deep; uniform vec3 shallow; uniform vec2 lightPos; uniform float aspect; uniform vec2 vignette;\n' +
     'void main(){\n' +
-    // sample the SQUARE sim into a centred square so ripples stay full circles
-    '  vec2 s = vec2((v.x-0.5)*aspect + 0.5, v.y);\n' +
-    '  if (s.x < 0.0 || s.x > 1.0) { o = vec4(0.0); return; }\n' +
+    // COVER-fit the square sim to the viewport: scale until it fills, crop the
+    // overflow. The old CONTAIN fit letterboxed the sim into a centred square of
+    // side = viewport HEIGHT and discarded everything outside it, which is exactly
+    // why a maximised ultrawide window showed hard vertical edges — at aspect 2.5
+    // the square covered only 39% of the width. Both branches below scale x and y
+    // by the same factor, so ripples stay perfectly circular, and neither can
+    // sample outside [0,1], so nothing is ever clipped.
+    '  vec2 s = aspect > 1.0\n' +
+    '    ? vec2(v.x, (v.y - 0.5) / aspect + 0.5)\n' +
+    '    : vec2((v.x - 0.5) * aspect + 0.5, v.y);\n' +
     '  float hx=texture(u,s+vec2(texel.x,0.)).x - texture(u,s-vec2(texel.x,0.)).x;\n' +
     '  float hy=texture(u,s+vec2(0.,texel.y)).x - texture(u,s-vec2(0.,texel.y)).x;\n' +
     '  vec3 n=normalize(vec3(-hx*18.0, -hy*18.0, 1.0));\n' +
@@ -120,7 +127,18 @@ window.startRipples = function (canvas, cfg) {
     '  vec3 col = mix(deep, shallow, diff);\n' +
     '  col += glow * vec3(0.34,0.46,0.66);\n' +
     '  col += spec * vec3(0.82,0.91,1.0);\n' +
-    '  o=vec4(col, 1.0);\n' +
+    // The water now carries its own radial falloff. Previously it wrote alpha 1.0
+    // everywhere and the "black fade" was really just the CSS pool showing around
+    // the clipped square — so maximising the window (small square, big screen)
+    // made the fade look strong, and filling the screen with water erased it.
+    // Distance is aspect-corrected: d = 1.0 at the top and bottom edges whatever
+    // the window shape, and larger toward the sides of a wide one, so the fade
+    // lands in the same visual place at every size. Premultiplied, because the
+    // context composites that way by default.
+    '  vec2 q = (v - vec2(0.5)) * vec2(aspect, 1.0);\n' +
+    '  float d = length(q) * 2.0;\n' +
+    '  float vign = 1.0 - smoothstep(vignette.x, vignette.y, d);\n' +
+    '  o = vec4(col * vign, vign);\n' +
     '}';
 
   var texel = [1 / SIM, 1 / SIM];
@@ -130,6 +148,9 @@ window.startRipples = function (canvas, cfg) {
   var damping = cfg.damping || 0.992;
   var cx = cfg.centerX != null ? cfg.centerX : 0.5;
   var cy = cfg.centerY != null ? cfg.centerY : 0.5;
+  // [fully opaque water, fully faded] as aspect-corrected radii, where 1.0 is the
+  // top/bottom edge of the viewport. Tune these to move the black fade in or out.
+  var vignette = cfg.vignette || [0.5, 1.25];
   var stepEvery = cfg.stepEvery || 3; // sim step once per N frames → slower outward travel
   var dropRadius = cfg.dropRadius || 0.05;
   var dropStrength = cfg.dropStrength || 0.12;
@@ -258,6 +279,7 @@ window.startRipples = function (canvas, cfg) {
     gl.uniform3f(U(pRender, 'shallow'), shallow[0], shallow[1], shallow[2]);
     gl.uniform2f(U(pRender, 'lightPos'), lightPos[0], lightPos[1]);
     gl.uniform1f(U(pRender, 'aspect'), canvas.width / canvas.height);
+    gl.uniform2f(U(pRender, 'vignette'), vignette[0], vignette[1]);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
 
@@ -311,9 +333,18 @@ window.startRipples = function (canvas, cfg) {
     var ux = (clientX - r.left) / r.width;
     var uy = 1.0 - (clientY - r.top) / r.height;
     var aspect = canvas.width / canvas.height;
-    var sx = (ux - 0.5) * aspect + 0.5; // map pointer into the centred square
-    if (sx < 0.0 || sx > 1.0 || uy < 0.0 || uy > 1.0) return;
-    drop(sx, uy, radius, strength);
+    // Must mirror the COVER fit in the render shader exactly, or the ripple
+    // appears somewhere other than under the pointer.
+    var sx, sy;
+    if (aspect > 1.0) {
+      sx = ux;
+      sy = (uy - 0.5) / aspect + 0.5;
+    } else {
+      sx = (ux - 0.5) * aspect + 0.5;
+      sy = uy;
+    }
+    if (sx < 0.0 || sx > 1.0 || sy < 0.0 || sy > 1.0) return;
+    drop(sx, sy, radius, strength);
   }
   function onPointerMove(e) {
     if (!running || lost) return;
@@ -340,6 +371,18 @@ window.startRipples = function (canvas, cfg) {
     window.addEventListener('mousemove', onPointerMove, OPTS);
     window.addEventListener('touchmove', onTouchMove, OPTS);
     window.addEventListener('touchstart', onTouchMove, OPTS);
+  }
+  /* Track the element, not just the window. ResizeObserver fires for anything
+     that changes the canvas box — maximise/restore, drag-resize, a DPI change
+     from moving the window to another monitor, mobile URL-bar collapse — and it
+     reports the change directly rather than us inferring it from a window event.
+     window.resize stays as the fallback for browsers without it. The shader
+     re-reads the aspect ratio every frame, so the water reflows continuously
+     while a drag is in progress rather than snapping at the end. */
+  var ro = null;
+  if (typeof ResizeObserver === 'function') {
+    ro = new ResizeObserver(resize);
+    ro.observe(canvas);
   }
   window.addEventListener('resize', resize);
 
@@ -386,6 +429,7 @@ window.startRipples = function (canvas, cfg) {
       running = false;
       cancelAnimationFrame(rafId);
       clearInterval(amb);
+      if (ro) ro.disconnect();
       window.removeEventListener('resize', resize);
       if (hasPointer) {
         window.removeEventListener('pointermove', onPointerMove);
@@ -428,6 +472,11 @@ window.startRipples2D = function (canvas, cfg) {
     H = canvas.height = Math.max(1, Math.floor(canvas.clientHeight * dpr));
   }
   resize();
+  var ro2 = null;
+  if (typeof ResizeObserver === 'function') {
+    ro2 = new ResizeObserver(resize);
+    ro2.observe(canvas);
+  }
   window.addEventListener('resize', resize);
 
   function spawn(x, y, strength) {
@@ -507,6 +556,7 @@ window.startRipples2D = function (canvas, cfg) {
       running = false;
       cancelAnimationFrame(rafId);
       clearInterval(amb);
+      if (ro2) ro2.disconnect();
       window.removeEventListener('resize', resize);
       window.removeEventListener(moveEvt, onMove);
       window.removeEventListener(downEvt, onDown);
