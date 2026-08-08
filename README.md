@@ -1,36 +1,73 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# The Well Church — Henderson, NV
 
-## Getting Started
+Website for The Well Church. Next.js 16 (App Router) · Tailwind CSS v4 · TypeScript ·
+Prisma/PostgreSQL (frozen — see below).
 
-First, run the development server:
+**Read [`CLAUDE.md`](./CLAUDE.md) before changing anything** — it is the project
+constitution (architecture constraints, security rules, Next 16 conventions).
+[`AGENTS.md`](./AGENTS.md) holds the phased build plan.
+
+## Current state: DEMO-FIRST
+
+The church has **not yet committed** to using this build. What exists today is a
+front-end-only **pitch demo** on branch `demo/church-frontend` — a fully static export
+(`output: 'export'`) with mock content and no backend. Interactive features (login,
+giving, member portal, contact form) render as styled "Coming soon" states.
+
+Live demo: **https://thewell-demo.pages.dev** — the interactive WebGL water background
+is **desktop-only** (needs hover + a fine pointer + ≥1024px); phones and
+`prefers-reduced-motion` get the CSS fallback. Demo it on a laptop.
+
+Backend is **FROZEN** at Phase 0.3 (Prisma schema + RLS, branch
+`feature/phase-0.3-database`). Do not build Phase 0.4+ until the church greenlights.
+
+## Requirements
+
+Node is **pinned in `.nvmrc`** (currently `24.16.0`). `package.json` `engines` and CI
+both read that file — change the version there and every layer follows. Node 20 went
+end-of-life on 2026-04-30 and is not a supported target.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+nvm use          # reads .nvmrc
+npm ci
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Commands
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Command             | What it does                                         |
+| ------------------- | ---------------------------------------------------- |
+| `npm run dev`       | Dev server on http://localhost:3000                  |
+| `npm run build`     | Production build → static export in `out/`           |
+| `npm run lint`      | ESLint 9 flat config (`next lint` is removed in v16) |
+| `npm run typecheck` | `tsc --noEmit`                                       |
+| `npm run test`      | Vitest                                               |
+| `npm run format`    | Prettier                                             |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Preview the exported build the way the host serves it:
 
-## Learn More
+```bash
+cd out && python -m http.server 8080
+```
 
-To learn more about Next.js, take a look at the following resources:
+Kill any stray `http.server` process first — it locks `out/` and the next build fails.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Deploying the demo
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Cloudflare Pages project `thewell-demo`, **direct upload** (not git-connected), so the
+build happens here and Pages only serves `out/`:
 
-## Deploy on Vercel
+```bash
+npm run build
+CLOUDFLARE_ACCOUNT_ID=17793385ce1563b8f48fd3841a1ad12a \
+  wrangler pages deploy out --project-name thewell-demo --branch main --commit-dirty=true
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The Cloudflare API occasionally exceeds wrangler's 10s timeout from this machine —
+retry, it lands.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Hosting (decided, not built)
+
+When the church says yes: drop `output: 'export'` to re-enable SSR/PPR/Route Handlers,
+then self-host on a **Proxmox VM** — Next.js standalone + PostgreSQL via Docker Compose,
+ingress via **Cloudflare Tunnel** (no open ports), nightly `pg_dump` → NAS. See
+CLAUDE.md §1.1.

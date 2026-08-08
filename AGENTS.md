@@ -32,7 +32,9 @@ This roadmap is structured in 6 phases. Each phase must be fully completed and r
 
 ### 0.2 CI/CD Pipeline
 - GitHub Actions: lint → typecheck → test → build on every PR
-- Vercel project connected to GitHub (auto-deploy preview on PR, auto-deploy main to staging)
+- Deploy target is the self-hosted Proxmox VM (CLAUDE.md §1) — build the standalone
+  image in CI, ship it to the VM over the Cloudflare Tunnel. Not yet built: the demo
+  deploys as a static export by direct upload to Cloudflare Pages.
 - Production deploy is MANUAL trigger only (never auto-deploy to prod)
 - Supply-chain security in CI from day one:
   - `.github/dependabot.yml` — weekly npm + GitHub Actions update PRs
@@ -66,7 +68,7 @@ This roadmap is structured in 6 phases. Each phase must be fully completed and r
 - MFA/TOTP scaffolding for staff/admin accounts (enforced in Phase 2; audited in Phase 4)
 - Rate limiting with `@upstash/ratelimit` on auth routes (5 attempts / 15 min per IP)
 - CORS: restrict API routes to same-origin + PCO webhook IPs
-- Enable HTTPS-only (Vercel enforces this; verify staging)
+- Enable HTTPS-only (Cloudflare Tunnel terminates TLS; verify staging)
 - Sentry error monitoring configured for all environments
 - `app/robots.ts`: noindex staging environment
 
@@ -306,7 +308,9 @@ Structure content so AI assistants (ChatGPT, Perplexity, Google AI Overviews) ca
 
 ### 5.3 Pre-Launch Checklist
 - [ ] Custom domain configured and SSL active
-- [ ] Production env vars set in Vercel (verify none missing)
+- [ ] Production env vars set on the VM and cross-checked against `docs/env-manifest.md`
+      (verify none missing; build-time `NEXT_PUBLIC_*` vars must reach the **build shell**,
+      not only the service manager — wiring them to the runtime alone fails silently)
 - [ ] Google Analytics 4 property connected and receiving data
 - [ ] Google Search Console property verified, sitemap submitted
 - [ ] Google Business Profile updated with correct hours, website URL, photos
@@ -318,7 +322,7 @@ Structure content so AI assistants (ChatGPT, Perplexity, Google AI Overviews) ca
 - [ ] Staging environment set to noindex
 
 ### 5.4 Post-Launch (Week 1)
-- Monitor Vercel error logs and Sentry for runtime errors
+- Monitor container/service logs on the VM and Sentry for runtime errors
 - Monitor Core Web Vitals in Google Search Console
 - Confirm Google is indexing public pages (`site:domain.com`)
 - Gather first member feedback on portal UX

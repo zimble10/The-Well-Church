@@ -208,7 +208,8 @@ Next.js 16 made several breaking changes from the 14/15 conventions baked into A
 ### 6.4 Environments
 - Three environments: development, staging, production
 - Staging must mirror production — no schema differences
-- Feature flags via Vercel Edge Config for gradual rollouts
+- Feature flags via environment variables or a DB-backed flag table for gradual rollouts
+  (the self-hosted target has no Edge Config — see §5)
 
 ---
 
