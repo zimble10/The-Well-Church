@@ -178,7 +178,18 @@ window.startRipples = function (canvas, cfg) {
   var minFrameMs = cfg.maxFps ? 1000 / cfg.maxFps : 0;
 
   // --- GPU objects, rebuilt from scratch if the context is ever lost ---------
-  var pUpdate, pDrop, pRender, quad, texA, texB, fboA, fboB;
+  var pUpdate, pDrop, pRender, quad, vao, texA, texB, fboA, fboB;
+  /*
+   * Uniform locations, resolved once at build time.
+   *
+   * These used to be looked up with gl.getUniformLocation inside the draw
+   * functions — seven per render(), five per drop(), plus a getAttribLocation
+   * for the quad. Those are synchronous queries against the linked program, not
+   * cheap state sets, and render() runs every frame while drop() runs on every
+   * pointer event. They belong in setup.
+   */
+  var uUpdate, uDrop, uRender;
+  var lastAspect = -1;
 
   function sh(type, src) {
     var s = gl.createShader(type);
@@ -191,15 +202,13 @@ window.startRipples = function (canvas, cfg) {
     var p = gl.createProgram();
     gl.attachShader(p, sh(gl.VERTEX_SHADER, vs));
     gl.attachShader(p, sh(gl.FRAGMENT_SHADER, fs));
+    // Pin the quad attribute to slot 0 in every program BEFORE linking, so one
+    // VAO describes the geometry for all three and no program needs its own
+    // attribute setup at draw time.
+    gl.bindAttribLocation(p, 0, 'a');
     gl.linkProgram(p);
     if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
     return p;
-  }
-  function bindQuad(p) {
-    var loc = gl.getAttribLocation(p, 'a');
-    gl.bindBuffer(gl.ARRAY_BUFFER, quad);
-    gl.enableVertexAttribArray(loc);
-    gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
   }
   function U(p, name) {
     return gl.getUniformLocation(p, name);
@@ -229,9 +238,63 @@ window.startRipples = function (canvas, cfg) {
     pDrop = prog(VS, DROP);
     pRender = prog(VS, RENDER);
 
+    uUpdate = {
+      u: U(pUpdate, 'u'),
+      texel: U(pUpdate, 'texel'),
+      damping: U(pUpdate, 'damping'),
+      c2: U(pUpdate, 'c2'),
+    };
+    uDrop = {
+      u: U(pDrop, 'u'),
+      center: U(pDrop, 'center'),
+      radius: U(pDrop, 'radius'),
+      strength: U(pDrop, 'strength'),
+      aspect: U(pDrop, 'aspect'),
+    };
+    uRender = {
+      u: U(pRender, 'u'),
+      texel: U(pRender, 'texel'),
+      deep: U(pRender, 'deep'),
+      shallow: U(pRender, 'shallow'),
+      lightPos: U(pRender, 'lightPos'),
+      aspect: U(pRender, 'aspect'),
+      vignette: U(pRender, 'vignette'),
+    };
+
     quad = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, quad);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+
+    // One VAO for all three programs (slot 0 pinned in prog()). Bound once and
+    // left bound — nothing else in this file touches vertex state — so the draw
+    // functions do no attribute work at all.
+    vao = gl.createVertexArray();
+    gl.bindVertexArray(vao);
+    gl.bindBuffer(gl.ARRAY_BUFFER, quad);
+    gl.enableVertexAttribArray(0);
+    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+
+    /* Uniforms that never change are program state, so they survive useProgram
+       switches and only need setting once. That leaves the per-frame path with
+       just the handful that actually vary. */
+    gl.useProgram(pUpdate);
+    gl.uniform1i(uUpdate.u, 0);
+    gl.uniform2f(uUpdate.texel, texel[0], texel[1]);
+    gl.uniform1f(uUpdate.damping, stepDamping);
+    gl.uniform1f(uUpdate.c2, c2);
+
+    gl.useProgram(pDrop);
+    gl.uniform1i(uDrop.u, 0);
+    gl.uniform1f(uDrop.aspect, 1.0); // the sim grid is square; always 1
+
+    gl.useProgram(pRender);
+    gl.uniform1i(uRender.u, 0);
+    gl.uniform2f(uRender.texel, texel[0], texel[1]);
+    gl.uniform3f(uRender.deep, deep[0], deep[1], deep[2]);
+    gl.uniform3f(uRender.shallow, shallow[0], shallow[1], shallow[2]);
+    gl.uniform2f(uRender.lightPos, lightPos[0], lightPos[1]);
+    gl.uniform2f(uRender.vignette, vignette[0], vignette[1]);
+    lastAspect = -1; // force one aspect upload on the next render
 
     texA = makeTex();
     texB = makeTex();
@@ -261,14 +324,11 @@ window.startRipples = function (canvas, cfg) {
     gl.bindFramebuffer(gl.FRAMEBUFFER, fboB);
     gl.viewport(0, 0, SIM, SIM);
     gl.useProgram(pDrop);
-    bindQuad(pDrop);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, texA);
-    gl.uniform1i(U(pDrop, 'u'), 0);
-    gl.uniform2f(U(pDrop, 'center'), dcx, dcy);
-    gl.uniform1f(U(pDrop, 'radius'), radius);
-    gl.uniform1f(U(pDrop, 'strength'), strength);
-    gl.uniform1f(U(pDrop, 'aspect'), 1.0);
+    gl.uniform2f(uDrop.center, dcx, dcy);
+    gl.uniform1f(uDrop.radius, radius);
+    gl.uniform1f(uDrop.strength, strength);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     swap();
   }
@@ -277,13 +337,8 @@ window.startRipples = function (canvas, cfg) {
     gl.bindFramebuffer(gl.FRAMEBUFFER, fboB);
     gl.viewport(0, 0, SIM, SIM);
     gl.useProgram(pUpdate);
-    bindQuad(pUpdate);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, texA);
-    gl.uniform1i(U(pUpdate, 'u'), 0);
-    gl.uniform2f(U(pUpdate, 'texel'), texel[0], texel[1]);
-    gl.uniform1f(U(pUpdate, 'damping'), stepDamping);
-    gl.uniform1f(U(pUpdate, 'c2'), c2);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     swap();
   }
@@ -292,16 +347,15 @@ window.startRipples = function (canvas, cfg) {
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.useProgram(pRender);
-    bindQuad(pRender);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, texA);
-    gl.uniform1i(U(pRender, 'u'), 0);
-    gl.uniform2f(U(pRender, 'texel'), texel[0], texel[1]);
-    gl.uniform3f(U(pRender, 'deep'), deep[0], deep[1], deep[2]);
-    gl.uniform3f(U(pRender, 'shallow'), shallow[0], shallow[1], shallow[2]);
-    gl.uniform2f(U(pRender, 'lightPos'), lightPos[0], lightPos[1]);
-    gl.uniform1f(U(pRender, 'aspect'), canvas.width / canvas.height);
-    gl.uniform2f(U(pRender, 'vignette'), vignette[0], vignette[1]);
+    // Aspect is the only per-frame uniform, and it only actually changes on a
+    // resize — so upload it only when it has.
+    var aspect = canvas.width / canvas.height;
+    if (aspect !== lastAspect) {
+      gl.uniform1f(uRender.aspect, aspect);
+      lastAspect = aspect;
+    }
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
 
@@ -353,14 +407,47 @@ window.startRipples = function (canvas, cfg) {
   var _last = 0;
   var rafId = 0;
 
+  /*
+   * Adaptive quality. Fragment cost scales with the square of the pixel ratio,
+   * so a weak GPU behind a high-DPI panel is the worst case — and it is exactly
+   * the case we cannot detect up front. Rather than guess from a device string,
+   * watch real frame times and step the resolution down once if the machine is
+   * visibly struggling. Deliberately one-way and slow to trigger: the aim is to
+   * rescue a bad experience, not to oscillate.
+   *
+   * Timing deliberately drives DPR only, never stepEvery — changing the step
+   * rate would change how fast the water moves, so a slow device would get a
+   * different animation rather than the same one rendered more cheaply.
+   */
+  var prevT = 0;
+  var slowStreak = 0;
+  var degraded = false;
+  function watchPerf(now) {
+    if (!prevT) {
+      prevT = now;
+      return;
+    }
+    var dt = now - prevT;
+    prevT = now;
+    if (dt > 28) slowStreak++;
+    else if (slowStreak > 0) slowStreak--;
+    if (!degraded && slowStreak > 120 && DPR_CAP > 1) {
+      degraded = true;
+      DPR_CAP = 1;
+      resizePending = true;
+    }
+  }
+
   function frame(now) {
     if (!running || lost) return;
     rafId = requestAnimationFrame(frame);
     if (minFrameMs && now - _last < minFrameMs) return;
     _last = now || 0;
+    watchPerf(now || 0);
     // Resize here, never from a standalone callback: the clear it causes is then
     // always followed by the render below, within the same frame.
     if (resizePending) applySize();
+    flushInput(); // at most one move + one press, whatever the input rate
     _f++;
     if (_f % stepEvery === 0) step(); // propagate 1/stepEvery as fast (gentle roll)
     render();
@@ -388,20 +475,49 @@ window.startRipples = function (canvas, cfg) {
     if (sx < 0.0 || sx > 1.0 || sy < 0.0 || sy > 1.0) return;
     drop(sx, sy, radius, strength);
   }
+
+  /*
+   * Input is QUEUED, not drawn on arrival.
+   *
+   * drop() is a full render-to-texture pass plus a buffer swap. Firing one per
+   * pointer event meant a 1000Hz gaming mouse could trigger ~16 extra GPU passes
+   * inside a single 60fps frame, and a multi-touch drag could do worse — all of
+   * it invisible, because only the last state before render() is ever seen. The
+   * frame loop now applies at most one move and one press per frame, which is
+   * the most that can actually be displayed.
+   */
+  var pendingMove = null;
+  var pendingPress = null;
+  function flushInput() {
+    if (pendingPress) {
+      addRipple(pendingPress[0], pendingPress[1], pendingPress[2], pendingPress[3]);
+      pendingPress = null;
+    }
+    if (pendingMove) {
+      addRipple(pendingMove[0], pendingMove[1], pendingMove[2], pendingMove[3]);
+      pendingMove = null;
+    }
+  }
   function onPointerMove(e) {
     if (!running || lost) return;
-    addRipple(e.clientX, e.clientY, cfg.cursorRadius || 0.03, cfg.cursorStrength || 0.06);
+    pendingMove = [e.clientX, e.clientY, cfg.cursorRadius || 0.03, cfg.cursorStrength || 0.06];
   }
   function onPointerDown(e) {
     if (!running || lost) return;
     // A tap deserves a bigger splash than a passing cursor — it is deliberate.
-    addRipple(e.clientX, e.clientY, (cfg.cursorRadius || 0.03) * 1.6, (cfg.cursorStrength || 0.06) * 2.2);
+    pendingPress = [
+      e.clientX,
+      e.clientY,
+      (cfg.cursorRadius || 0.03) * 1.6,
+      (cfg.cursorStrength || 0.06) * 2.2,
+    ];
   }
   function onTouchMove(e) {
-    if (!running || lost || !e.touches) return;
-    for (var i = 0; i < e.touches.length; i++) {
-      addRipple(e.touches[i].clientX, e.touches[i].clientY, cfg.cursorRadius || 0.03, cfg.cursorStrength || 0.06);
-    }
+    if (!running || lost || !e.touches || !e.touches.length) return;
+    // Legacy path only (no Pointer Events). One finger per frame is all that
+    // survives to the screen anyway.
+    var t = e.touches[0];
+    pendingMove = [t.clientX, t.clientY, cfg.cursorRadius || 0.03, cfg.cursorStrength || 0.06];
   }
 
   var OPTS = { passive: true };
@@ -464,6 +580,11 @@ window.startRipples = function (canvas, cfg) {
     resume: function () {
       if (!running) {
         running = true;
+        // A pause is not a slow frame. Without this the gap since the last frame
+        // would be counted against the perf budget and could degrade quality for
+        // nothing more than the tab having been in the background.
+        prevT = 0;
+        _last = 0;
         if (!lost) rafId = requestAnimationFrame(frame);
       }
     },

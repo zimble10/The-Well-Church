@@ -61,7 +61,14 @@ function tuneForDevice(): Record<string, unknown> {
   if (w < 1280) {
     return { resolution: 384, dprCap: 1.5, maxFps: 60, stepEvery: 3 };
   }
-  return { resolution: lowEnd ? 384 : 512, dprCap: 2, stepEvery: 3 };
+  /*
+   * dprCap 1.5 rather than 2. Fragment cost scales with the SQUARE of the pixel
+   * ratio, so 2 costs ~78% more than 1.5 — and on a high-DPI laptop panel that
+   * is the difference between comfortable and hot. This effect is soft, blurred
+   * water with no fine detail to lose, which is precisely the kind of content
+   * that does not repay rendering at full device resolution.
+   */
+  return { resolution: lowEnd ? 384 : 512, dprCap: 1.5, stepEvery: 3 };
 }
 
 /**
