@@ -17,12 +17,23 @@ const BASE: Record<string, unknown> = {
   deep: [0.01, 0.035, 0.075],
   shallow: [0.06, 0.17, 0.3],
   lightPos: [0.5, 0.5],
+  // Ripples travel outward at half the original speed. Implemented as a wave
+  // speed inside the sim rather than by stepping less often, so the motion stays
+  // smooth instead of stuttering. Reach is preserved automatically (see ripples.js).
+  waveSpeed: 0.5,
+  // Radii at which the water goes from fully opaque to fully faded, where 1.0 is
+  // the top/bottom edge of the viewport. Pulled inward from [0.5, 1.25] so the
+  // black reaches a little further toward the centre.
+  vignette: [0.4, 1.1],
   // Gentle rings from the centre (behind the logo), softly expanding outward.
   centerX: 0.5,
   centerY: 0.5,
   dropRadius: 0.055,
   dropStrength: 0.11,
-  dropInterval: 900,
+  // Doubled alongside waveSpeed. Ring spacing is speed × interval, so leaving
+  // this at 900 while halving the speed would have packed the rings twice as
+  // densely — a different look, not just a slower one.
+  dropInterval: 1800,
   cursorRadius: 0.035,
   cursorStrength: 0.06,
 };

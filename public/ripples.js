@@ -75,14 +75,22 @@ window.startRipples = function (canvas, cfg) {
     '#version 300 es\n' +
     PRECISION +
     'in vec2 v; out vec4 o;\n' +
-    'uniform sampler2D u; uniform vec2 texel; uniform float damping;\n' +
+    'uniform sampler2D u; uniform vec2 texel; uniform float damping; uniform float c2;\n' +
     'void main(){\n' +
     '  vec2 d = texture(u,v).xy;\n' +
     '  float l=texture(u,v-vec2(texel.x,0.)).x;\n' +
     '  float r=texture(u,v+vec2(texel.x,0.)).x;\n' +
     '  float t=texture(u,v+vec2(0.,texel.y)).x;\n' +
     '  float b=texture(u,v-vec2(0.,texel.y)).x;\n' +
-    '  float nh=(l+r+t+b)*0.5 - d.y;\n' +
+    // Damped wave equation written out with an explicit Courant term, so the
+    // propagation speed is a parameter instead of being baked into the grid.
+    // c2 = 0.5 reproduces the original exactly ((l+r+t+b)*0.5 - prev); halving
+    // the speed means c2 = 0.125, since c2 scales with speed SQUARED. Stability
+    // requires c2 <= 0.5, so every slower value is safely inside it.
+    // Slowing the wave this way keeps the sim stepping at its normal rate. The
+    // alternative — stepping half as often — drops the update rate to ~10/sec
+    // and the motion reads as stuttering rather than as slow water.
+    '  float nh = 2.0*d.x - d.y + c2*((l+r+t+b) - 4.0*d.x);\n' +
     '  nh*=damping;\n' +
     '  o=vec4(nh, d.x, 0., 1.);\n' +
     '}';
@@ -146,6 +154,19 @@ window.startRipples = function (canvas, cfg) {
   var shallow = cfg.shallow || [0.1, 0.27, 0.44];
   var lightPos = cfg.lightPos || [0.5, 0.42];
   var damping = cfg.damping || 0.992;
+  /*
+   * Propagation speed as a multiplier of the original: 1.0 = unchanged,
+   * 0.5 = ripples travel outward half as fast. Squared into the Courant term
+   * because wave speed enters the equation as c².
+   *
+   * Damping is per-STEP, so a slower wave crosses the same distance in more
+   * steps and would die out closer to the centre at the same damping value.
+   * Compensating with damping^speed keeps the ripples reaching just as far as
+   * before — only slower — instead of also shrinking the pool.
+   */
+  var waveSpeed = cfg.waveSpeed || 1.0;
+  var c2 = 0.5 * waveSpeed * waveSpeed;
+  var stepDamping = Math.pow(damping, waveSpeed);
   var cx = cfg.centerX != null ? cfg.centerX : 0.5;
   var cy = cfg.centerY != null ? cfg.centerY : 0.5;
   // [fully opaque water, fully faded] as aspect-corrected radii, where 1.0 is the
@@ -261,7 +282,8 @@ window.startRipples = function (canvas, cfg) {
     gl.bindTexture(gl.TEXTURE_2D, texA);
     gl.uniform1i(U(pUpdate, 'u'), 0);
     gl.uniform2f(U(pUpdate, 'texel'), texel[0], texel[1]);
-    gl.uniform1f(U(pUpdate, 'damping'), damping);
+    gl.uniform1f(U(pUpdate, 'damping'), stepDamping);
+    gl.uniform1f(U(pUpdate, 'c2'), c2);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     swap();
   }
@@ -289,16 +311,33 @@ window.startRipples = function (canvas, cfg) {
   function applySize() {
     resizePending = false;
     var dpr = Math.min(window.devicePixelRatio || 1, DPR_CAP);
-    var w = Math.max(1, Math.floor(canvas.clientWidth * dpr));
-    var h = Math.max(1, Math.floor(canvas.clientHeight * dpr));
+    var cw = canvas.clientWidth;
+    var ch = canvas.clientHeight;
+    // Mid-drag the layout can momentarily report a zero-sized box. Clamping that
+    // to 1px collapses the buffer and the water visibly vanishes, so hold the
+    // previous size and pick the real one up on the next frame instead.
+    if (!cw || !ch) {
+      resizePending = true;
+      return;
+    }
+    var w = Math.max(1, Math.floor(cw * dpr));
+    var h = Math.max(1, Math.floor(ch * dpr));
     if (w === canvas.width && h === canvas.height) return;
     canvas.width = w;
     canvas.height = h;
   }
+  /*
+   * Only FLAG the change — the frame loop applies it immediately before drawing.
+   *
+   * Assigning canvas.width/height reallocates and CLEARS the drawing buffer. When
+   * that happened in its own rAF callback it could land AFTER the same frame's
+   * render(), leaving a cleared canvas on screen until the next one. Dragging a
+   * window edge fires resize continuously, so that landed on frame after frame
+   * and the water flashed on and off. Resizing inside the draw guarantees the
+   * clear is always followed by a render in the same frame.
+   */
   function resize() {
-    if (resizePending) return;
     resizePending = true;
-    requestAnimationFrame(applySize);
   }
 
   try {
@@ -319,6 +358,9 @@ window.startRipples = function (canvas, cfg) {
     rafId = requestAnimationFrame(frame);
     if (minFrameMs && now - _last < minFrameMs) return;
     _last = now || 0;
+    // Resize here, never from a standalone callback: the clear it causes is then
+    // always followed by the render below, within the same frame.
+    if (resizePending) applySize();
     _f++;
     if (_f % stepEvery === 0) step(); // propagate 1/stepEvery as fast (gentle roll)
     render();
@@ -459,6 +501,7 @@ window.startRipples2D = function (canvas, cfg) {
   if (!ctx) return null;
 
   var DPR_CAP = cfg.dprCap || 1.5;
+  var speed = cfg.waveSpeed || 1.0;
   var rings = [];
   var running = true;
   var rafId = 0;
@@ -466,12 +509,26 @@ window.startRipples2D = function (canvas, cfg) {
   var W = 0;
   var H = 0;
 
-  function resize() {
+  /* Same rule as the WebGL path: flag it, apply it inside the draw. Assigning
+     canvas.width clears the 2D surface too, so resizing from a standalone
+     callback would flicker while a window edge is being dragged. */
+  var resizePending2 = false;
+  function applySize2() {
+    resizePending2 = false;
     var dpr = Math.min(window.devicePixelRatio || 1, DPR_CAP);
-    W = canvas.width = Math.max(1, Math.floor(canvas.clientWidth * dpr));
-    H = canvas.height = Math.max(1, Math.floor(canvas.clientHeight * dpr));
+    var cw = canvas.clientWidth;
+    var ch = canvas.clientHeight;
+    if (!cw || !ch) {
+      resizePending2 = true;
+      return;
+    }
+    W = canvas.width = Math.max(1, Math.floor(cw * dpr));
+    H = canvas.height = Math.max(1, Math.floor(ch * dpr));
   }
-  resize();
+  function resize() {
+    resizePending2 = true;
+  }
+  applySize2();
   var ro2 = null;
   if (typeof ResizeObserver === 'function') {
     ro2 = new ResizeObserver(resize);
@@ -490,12 +547,13 @@ window.startRipples2D = function (canvas, cfg) {
     if (now - last < 33) return; // ~30fps is plenty for slow rings
     var dt = last ? Math.min((now - last) / 1000, 0.1) : 0.033;
     last = now;
+    if (resizePending2) applySize2();
 
     ctx.clearRect(0, 0, W, H);
     var max = Math.max(W, H) * 0.75;
     for (var i = rings.length - 1; i >= 0; i--) {
       var ring = rings[i];
-      ring.r += max * 0.16 * dt;
+      ring.r += max * 0.16 * speed * dt; // honour waveSpeed so both paths match
       ring.a *= 1 - 0.55 * dt;
       if (ring.a < 0.004 || ring.r > max) {
         rings.splice(i, 1);
