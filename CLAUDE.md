@@ -13,7 +13,7 @@ This file is the authoritative context document for all Claude agents working on
 | Project Name | The Well Church (Henderson, NV) |
 | Client Type | Local church — Henderson, NV (non-profit, faith-based) |
 | Primary Goal | Full-featured public + members website with secure transactions |
-| Stack | Next.js 16+ (App Router, Turbopack default) + Node.js 20.9+ + PostgreSQL + Tailwind CSS v4 |
+| Stack | Next.js 16+ (App Router, Turbopack default) + Node.js **24.16.0** (pinned in `.nvmrc`) + PostgreSQL + Tailwind CSS v4 |
 | Church Mgmt | Planning Center integration (PCO) for members, events, giving |
 | Payments | Planning Center Giving (primary) + Stripe fallback for custom flows |
 | Hosting Target | **Self-hosted: Proxmox VM = everything** (Next.js standalone + PostgreSQL via Docker Compose) · ingress via **Cloudflare Tunnel** (no open ports) · backups = nightly `pg_dump` → NAS. *(Supersedes the earlier Vercel + Railway/Supabase plan — user decision 2026-08-06.)* |
@@ -75,7 +75,13 @@ Next.js 16 made several breaking changes from the 14/15 conventions baked into A
 - **shadcn/ui CLI must be current** — use the latest `npx shadcn@latest add ...` when scaffolding components; older CLI versions assume Tailwind v3 config and will not match the v4 CSS-first setup.
 - **Partial Prerendering (PPR)** is available — prefer it for pages mixing a static shell with dynamic data (sermon/event pages with live PCO data). Enable per route via `export const experimental_ppr = true` once validated; pair with `<Suspense>` + `loading.tsx` streaming.
 - **React Compiler (React 19)** may be enabled (`reactCompiler: true` in `next.config.ts`) to auto-memoize components — adopt only after confirming build + test suite stay green.
-- Minimum versions: Node.js 20.9+, TypeScript 5.1+, React 19.2.
+- **Runtime is pinned, not floored.** `.nvmrc` holds the single version (`24.16.0`);
+  `package.json` `engines` and the CI jobs (`node-version-file: .nvmrc`) both read it,
+  and the VM must install the same one. Change it in `.nvmrc` and every layer follows —
+  never hardcode a Node version in a workflow. Node 20 reached **end-of-life 2026-04-30**,
+  so the old 20.9 floor is no longer a supported target; Node 22 (EOL 2027-04) is the
+  only acceptable fallback if 24 ever breaks a dependency.
+- Minimum versions: Node.js 24.16.0 (pinned), TypeScript 5.1+, React 19.2.
 
 ### 3.2 Security
 - JWT tokens stored in httpOnly cookies only — never localStorage or sessionStorage

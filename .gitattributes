@@ -15,3 +15,10 @@
 *.timer     text eol=lf
 Dockerfile  text eol=lf
 Caddyfile   text eol=lf
+
+# Runtime pin and CI definitions are read by Linux tooling, not executed by it,
+# but they fail the same way: a CRLF `.nvmrc` makes `nvm use` look for a version
+# string with a trailing \r, and GitHub Actions parses these YAML files on ubuntu.
+.nvmrc      text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
