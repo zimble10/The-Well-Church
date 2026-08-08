@@ -72,8 +72,16 @@
   z-index: -3;
   pointer-events: none;
   overflow: hidden;
+  /* `closest-side` is what makes this read as a well rather than as a wide
+     letterbox. The default sizing is farthest-CORNER, so on a 2386x1305 window
+     the circle's radius was 1359px: the left and right edges landed at 88% of it
+     and went black, while the top and bottom edges sat at only 48% and stayed
+     navy. Black at the sides, blue at the top — two vertical bands, which is the
+     opposite of a round opening. Sizing to the closest side pins 100% to the
+     half-height, so the pool is a true circle inscribed in the viewport and
+     everything beyond it — the whole width of a wide screen — is wall. */
   background: radial-gradient(
-    circle at 50% 50%,
+    circle closest-side at 50% 50%,
     #1d4f86 0%,
     #17406d 16%,
     #0f2b49 32%,
@@ -82,16 +90,21 @@
     #030405 84%,
     #020203 100%
   );
+  background-color: #020203; /* beyond the circle on a wide screen */
 }
 /* Gentle drifting shimmer (cheap, no filter) — the calm fallback water. */
 .site-bg::after {
   content: '';
   position: absolute;
   inset: 0;
+  /* vmin, not %. Percentages resolve against each axis separately, so on a wide
+     window `28% 24%` became a 668x313px ellipse — smearing the shimmer sideways
+     and reinforcing the banding. vmin keys both radii to the short edge, so the
+     highlights stay round at any window shape. */
   background:
-    radial-gradient(28% 24% at 46% 44%, rgba(150, 198, 255, 0.22), transparent 66%),
-    radial-gradient(22% 18% at 58% 54%, rgba(198, 226, 255, 0.16), transparent 68%),
-    radial-gradient(18% 15% at 51% 39%, rgba(120, 180, 255, 0.16), transparent 70%);
+    radial-gradient(28vmin 24vmin at 46% 44%, rgba(150, 198, 255, 0.22), transparent 66%),
+    radial-gradient(22vmin 18vmin at 58% 54%, rgba(198, 226, 255, 0.16), transparent 68%),
+    radial-gradient(18vmin 15vmin at 51% 39%, rgba(120, 180, 255, 0.16), transparent 70%);
   mix-blend-mode: screen;
   animation: well-shimmer 20s ease-in-out infinite;
   will-change: transform, opacity;

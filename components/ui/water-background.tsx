@@ -22,9 +22,14 @@ const BASE: Record<string, unknown> = {
   // smooth instead of stuttering. Reach is preserved automatically (see ripples.js).
   waveSpeed: 0.5,
   // Radii at which the water goes from fully opaque to fully faded, where 1.0 is
-  // the top/bottom edge of the viewport. Pulled inward from [0.5, 1.25] so the
-  // black reaches a little further toward the centre.
-  vignette: [0.4, 1.1],
+  // the top/bottom edge of the viewport.
+  //
+  // The outer value MUST stay below 1.0. The falloff has always been a circle,
+  // but at 1.1 it finished beyond the top and bottom edges, so the black only
+  // ever closed at the sides — which reads as two dark bands flanking a strip of
+  // water, not as a well. Ending at 0.82 closes the ring above and below too, so
+  // the water becomes a circular opening with black all the way around it.
+  vignette: [0.3, 0.82],
   // Gentle rings from the centre (behind the logo), softly expanding outward.
   centerX: 0.5,
   centerY: 0.5,

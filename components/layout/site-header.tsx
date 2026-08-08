@@ -13,12 +13,21 @@ export function SiteHeader() {
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
         {/* Brand */}
         <Link href="/" className="group flex items-center gap-4" onClick={() => setOpen(false)}>
+          {/*
+            The artwork is a solid #000 disc, and the header sits on the warm
+            near-black #0a0908 — so a hard circular edge was visible even before
+            the ring-1 that used to be drawn on top of it. The ring is gone and
+            the disc's outer margin is feathered with a radial mask, which fades
+            the black into the bar instead of ending it. The mask starts at 68%,
+            outside the blue brush ring (~64%), so only the dead black margin is
+            touched and the mark itself stays crisp.
+          */}
           <Image
             src="/logo.png"
             alt="The Well Church"
-            width={56}
-            height={56}
-            className="h-14 w-14 rounded-full ring-1 ring-blue-800/40 transition group-hover:ring-blue-500/60"
+            width={64}
+            height={64}
+            className="h-16 w-16 [mask-image:radial-gradient(circle,#000_68%,transparent_86%)] transition-transform duration-500 group-hover:scale-[1.04]"
             priority
           />
           <span className="font-display hidden text-2xl leading-none tracking-tight sm:block">
