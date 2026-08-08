@@ -30,7 +30,15 @@ export function Reveal({
           io.disconnect();
         }
       },
-      { threshold: 0.12, rootMargin: '0px 0px -8% 0px' },
+      /*
+       * Fire as soon as the element's leading edge crosses into view, rather
+       * than waiting for 12% of it to be showing. On a tall section that 12%
+       * could be a couple of hundred pixels, so the fade started well after the
+       * section was already on screen and you watched it animate. Starting at
+       * the edge means it has settled by the time it holds your attention,
+       * which is what reads as subtle.
+       */
+      { threshold: 0, rootMargin: '0px 0px -6% 0px' },
     );
     io.observe(el);
     return () => io.disconnect();

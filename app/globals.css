@@ -294,14 +294,24 @@
      Only armed to opacity:0 when scripting is enabled, then .is-visible fades
      it up via the IntersectionObserver in <Reveal>. */
   .reveal {
+    /* Easing matters more than duration here. The previous curve was an
+       expo-out (0.16, 1, 0.3, 1), which covers most of the distance in the first
+       fraction of the time and coasts through a long invisible tail — it reads
+       as a snap no matter how long you make it. This curve moves gently at both
+       ends, so the whole duration is doing visible work.
+
+       Opacity is given slightly longer than the lift, so an element has settled
+       into position while still fading up. Arriving before it has finished
+       appearing is what makes the motion feel unhurried rather than staged. */
     transition:
-      opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
-      transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+      opacity 1.15s cubic-bezier(0.4, 0, 0.2, 1),
+      transform 1s cubic-bezier(0.4, 0, 0.2, 1);
   }
   @media (scripting: enabled) {
     .reveal {
       opacity: 0;
-      transform: translateY(18px);
+      /* Halved from 18px. The lift should be felt, not watched. */
+      transform: translateY(9px);
     }
     .reveal.is-visible {
       opacity: 1;
