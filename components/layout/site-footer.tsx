@@ -94,7 +94,7 @@ export function SiteFooter() {
         </div>
 
         {/* Demo watermark — honest about status during the pitch */}
-        <p className="text-paper-dim/70 mt-8 text-center font-mono text-[0.62rem] tracking-wider">
+        <p className="text-paper-dim mt-8 text-center font-mono text-[0.62rem] tracking-wider">
           Concept demo · built by 7LSM Marketing · not the church’s live site
         </p>
       </div>

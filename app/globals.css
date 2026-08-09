@@ -17,7 +17,20 @@
   /* -- "Paper": warm cream text -- */
   --color-paper: #e8e0d3;
   --color-paper-muted: #968a76;
-  --color-paper-dim: #5f5644;
+  /*
+   * Was #5f5644, which measured 2.60:1 to 2.75:1 against the three ink surfaces
+   * it is used on — well under the 4.5:1 this project commits to in CLAUDE.md
+   * §3.5, and it carries small mono labels across Connect, Events and the footer.
+   * #867d6d is the same warm hue moved ~29% toward paper: 4.63:1 on ink-soft,
+   * 4.77:1 on ink-card, 4.90:1 on ink, and still visibly dimmer than
+   * paper-muted (relative luminance 0.208 vs 0.260).
+   *
+   * Note this compresses the tier gap. On a near-black theme there is no such
+   * thing as a "very dim" text tier that also passes AA — the floor is set by
+   * the contrast requirement, not by taste. Anything dimmer than this is a
+   * decision to fail the standard.
+   */
+  --color-paper-dim: #867d6d;
 
   /* -- Church blue, as a metallic ramp (highlight -> brand -> steel) -- */
   --color-blue-100: #eaf7fd;

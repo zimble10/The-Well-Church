@@ -118,7 +118,7 @@ export default function ConnectPage() {
                   rows={4}
                   disabled
                   placeholder="I’m new and planning to visit this Sunday…"
-                  className="border-ink-line bg-ink text-paper placeholder:text-paper-dim/70 w-full cursor-not-allowed rounded-lg border px-4 py-3 outline-none"
+                  className="border-ink-line bg-ink text-paper placeholder:text-paper-dim w-full cursor-not-allowed rounded-lg border px-4 py-3 outline-none"
                 />
               </div>
               <button
@@ -157,7 +157,7 @@ function Field({
         type={type}
         disabled
         placeholder={placeholder}
-        className="border-ink-line bg-ink text-paper placeholder:text-paper-dim/70 w-full cursor-not-allowed rounded-lg border px-4 py-3 outline-none"
+        className="border-ink-line bg-ink text-paper placeholder:text-paper-dim w-full cursor-not-allowed rounded-lg border px-4 py-3 outline-none"
       />
     </div>
   );
