@@ -56,7 +56,15 @@ function tuneForDevice(): Record<string, unknown> {
   const lowEnd = cores <= 4;
 
   if (coarse || w < 768) {
-    return { resolution: lowEnd ? 192 : 256, dprCap: 1.25, maxFps: 30, stepEvery: 2 };
+    return {
+      resolution: lowEnd ? 192 : 256,
+      dprCap: 1.25,
+      maxFps: 30,
+      stepEvery: 2,
+      // Scrolling retracts the browser chrome and changes the viewport height
+      // without the user resizing anything. See applySize in ripples.js.
+      ignoreChromeJitter: true,
+    };
   }
   if (w < 1280) {
     return { resolution: 384, dprCap: 1.5, maxFps: 60, stepEvery: 3 };

@@ -59,6 +59,9 @@ window.startRipples = function (canvas, cfg) {
 
   var SIM = cfg.resolution || 256;
   var DPR_CAP = cfg.dprCap || 2;
+  // Set on touch devices, where a scrolling gesture retracts the browser chrome
+  // and changes the viewport height without the user resizing anything.
+  var ignoreChromeJitter = !!cfg.ignoreChromeJitter;
 
   /*
    * highp is not guaranteed in fragment shaders on mobile GPUs. Ask the
@@ -377,6 +380,23 @@ window.startRipples = function (canvas, cfg) {
     var w = Math.max(1, Math.floor(cw * dpr));
     var h = Math.max(1, Math.floor(ch * dpr));
     if (w === canvas.width && h === canvas.height) return;
+    /*
+     * Backstop for browsers without `lvh` (see .fluid-canvas in globals.css).
+     * A collapsing mobile URL bar changes the height by roughly 8-15% and leaves
+     * the width alone. Reallocating for that mid-scroll re-centres the sim and
+     * reads as the water sliding then snapping back, so on touch devices a
+     * height-only change of that scale is treated as browser chrome and ignored.
+     * A real rotation or split-screen resize changes the width too, or changes
+     * the height by far more than this, and still gets through.
+     */
+    if (
+      ignoreChromeJitter &&
+      canvas.width === w &&
+      canvas.height > 0 &&
+      Math.abs(h - canvas.height) < canvas.height * 0.22
+    ) {
+      return;
+    }
     canvas.width = w;
     canvas.height = h;
   }
@@ -643,8 +663,12 @@ window.startRipples2D = function (canvas, cfg) {
       resizePending2 = true;
       return;
     }
-    W = canvas.width = Math.max(1, Math.floor(cw * dpr));
-    H = canvas.height = Math.max(1, Math.floor(ch * dpr));
+    var w = Math.max(1, Math.floor(cw * dpr));
+    var h = Math.max(1, Math.floor(ch * dpr));
+    // Same mobile-chrome guard as the WebGL path.
+    if (cfg.ignoreChromeJitter && W === w && H > 0 && Math.abs(h - H) < H * 0.22) return;
+    W = canvas.width = w;
+    H = canvas.height = h;
   }
   function resize() {
     resizePending2 = true;

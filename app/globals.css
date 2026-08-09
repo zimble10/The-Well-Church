@@ -68,7 +68,14 @@
    dominates so text stays legible. */
 .site-bg {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  width: 100%;
+  /* Same reasoning as .fluid-canvas: a height that does not move when the mobile
+     URL bar does. This layer's gradient is sized to the box, so letting the box
+     track the chrome would resize the pool underneath the water as well. */
+  height: 100vh;
+  height: 100lvh;
   z-index: -3;
   pointer-events: none;
   overflow: hidden;
@@ -143,13 +150,37 @@
    never intercepts a scroll or a tap on a link. */
 .fluid-canvas {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
   z-index: -2;
   width: 100%;
-  height: 100%;
+  /*
+   * NOT `height: 100%` / `inset: 0`.
+   *
+   * Mobile browsers collapse the URL bar as you scroll, which changes the
+   * viewport height mid-gesture. A fixed element sized to the viewport therefore
+   * resizes while you are scrolling — the canvas buffer is reallocated at a new
+   * height and the simulation re-centres, which is the water sliding and then
+   * snapping back into place.
+   *
+   * `lvh` is the LARGE viewport height: the height with the browser chrome
+   * retracted. It does not change when the chrome does, so the canvas keeps one
+   * size for the whole gesture and collapsing the URL bar simply uncovers a bit
+   * more of something already drawn. `dvh` would be exactly wrong here — it is
+   * defined to track the chrome, which is the behaviour we are removing.
+   */
+  height: 100vh; /* fallback for browsers without lvh */
+  height: 100lvh;
   pointer-events: none;
-  -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 0%, #000 32%, transparent 52%);
-  mask-image: radial-gradient(circle at 50% 50%, #000 0%, #000 32%, transparent 52%);
+  /*
+   * The circular CSS mask that used to be here is gone. It was
+   * `radial-gradient(circle at 50% 50%, #000 32%, transparent 52%)` with default
+   * farthest-corner sizing, so its radius swung wildly with the window shape: on
+   * a 390x844 phone it clipped the water to a ~242px circle, well inside the
+   * shader's own falloff, which is part of why the effect looked cramped on a
+   * phone. The shader vignette is aspect-corrected and does this job correctly at
+   * every size, so masking twice only fought it.
+   */
 }
 
 @layer base {
