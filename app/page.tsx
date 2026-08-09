@@ -44,7 +44,18 @@ export default function HomePage() {
             </div>
           </Reveal>
           <Reveal delay={320}>
-            <div className="text-paper-dim mt-16 font-mono text-xs tracking-widest uppercase">
+            {/*
+              Service times are the one thing a first-time visitor actually needs
+              off this page, so they are sized to be read rather than glanced at:
+              text-xs → text-sm, and a full 1rem from the sm breakpoint up.
+
+              The colour moved off text-paper-dim as part of the same fix. Dim
+              (#5f5644) measured between 1.98:1 and 2.75:1 against the range of
+              backgrounds the water puts behind it — well short of the 4.5:1 that
+              CLAUDE.md §3.5 commits this project to. paper-muted reaches 5.17:1
+              where this line actually sits, and matches the hero paragraph above.
+            */}
+            <div className="text-paper-muted mt-16 font-mono text-sm tracking-widest uppercase sm:text-base">
               Sundays · {serviceTimes.inPerson.join(' / ')}
             </div>
           </Reveal>
