@@ -17,10 +17,11 @@ const BASE: Record<string, unknown> = {
   deep: [0.01, 0.035, 0.075],
   shallow: [0.06, 0.17, 0.3],
   lightPos: [0.5, 0.5],
-  // Ripples travel outward at half the original speed. Implemented as a wave
-  // speed inside the sim rather than by stepping less often, so the motion stays
-  // smooth instead of stuttering. Reach is preserved automatically (see ripples.js).
-  waveSpeed: 0.5,
+  // Ripples travel at the sim's native speed (James 2026-08-13: doubled back
+  // from 0.5). Implemented as a wave speed inside the sim rather than by
+  // stepping more often, so cost is unchanged. Reach is preserved
+  // automatically (see ripples.js). 1.0 is the stability ceiling (c2 = 0.5).
+  waveSpeed: 1.0,
   // Radii at which the water goes from fully opaque to fully faded, where 1.0 is
   // the top/bottom edge of the viewport.
   //
@@ -35,10 +36,10 @@ const BASE: Record<string, unknown> = {
   centerY: 0.5,
   dropRadius: 0.055,
   dropStrength: 0.11,
-  // Doubled alongside waveSpeed. Ring spacing is speed × interval, so leaving
-  // this at 900 while halving the speed would have packed the rings twice as
-  // densely — a different look, not just a slower one.
-  dropInterval: 1800,
+  // Moves WITH waveSpeed. Ring spacing is speed × interval, so the interval
+  // halves when the speed doubles — otherwise the rings would spread twice as
+  // far apart, a different look, not just a faster one.
+  dropInterval: 900,
   cursorRadius: 0.035,
   cursorStrength: 0.06,
 };
@@ -242,7 +243,7 @@ export function WaterBackground() {
     const RESUME_AT = 1.75; // sim resumes as the fade zone re-approaches
     // NOTE: the logo watermark's fade-out (.stage-image logo-fade keyframes in
     // globals.css) is pinned to FADE_START/FADE_END — change these together.
-    const POOL_SCALE_MAX = 2.25; // pool circle expansion once the water is gone
+    const POOL_SCALE_MAX = 3.5; // pool circle expansion once the water is gone
     const backdrop = document.querySelector<HTMLElement>('.site-bg');
     let lastOpacity = '';
     let lastScale = '';
