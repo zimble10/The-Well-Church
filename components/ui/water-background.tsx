@@ -227,12 +227,23 @@ export function WaterBackground() {
      * position itself, so it is exactly as smooth as the reader's scrolling.
      * The pause/resume thresholds both sit in the opacity-0 region, so their
      * dead band can never show.
+     *
+     * Over the same range, the CSS pool underneath (.site-bg, rendered by
+     * ScrollBackdrop) scales UP: its dark circular gradient expands outward,
+     * so the walls of the well recede and the page brightens as the water
+     * hands off to it. Driven from this one listener rather than a second one
+     * in ScrollBackdrop so the two motions can never drift apart, and done
+     * with a transform so the gradient is never repainted — the whole layer
+     * (gradient, black surround, shimmer) scales on the compositor.
      */
     const FADE_START = 1.0; // viewports scrolled where the fade begins
     const FADE_END = 1.75; // fully transparent from here on
     const PAUSE_AT = 1.9; // sim pauses (invisible — inside the faded region)
     const RESUME_AT = 1.75; // sim resumes as the fade zone re-approaches
+    const POOL_SCALE_MAX = 1.6; // pool circle expansion once the water is gone
+    const backdrop = document.querySelector<HTMLElement>('.site-bg');
     let lastOpacity = '';
+    let lastScale = '';
     const onScroll = () => {
       const y = window.scrollY;
       const h = window.innerHeight;
@@ -241,6 +252,18 @@ export function WaterBackground() {
       if (opacity !== lastOpacity) {
         lastOpacity = opacity;
         canvas.style.opacity = opacity;
+      }
+      if (backdrop) {
+        const scale =
+          t <= 0
+            ? ''
+            : t >= 1
+              ? `scale(${POOL_SCALE_MAX})`
+              : `scale(${(1 + (POOL_SCALE_MAX - 1) * t).toFixed(4)})`;
+        if (scale !== lastScale) {
+          lastScale = scale;
+          backdrop.style.transform = scale;
+        }
       }
       if (!scrolledAway && y > h * PAUSE_AT) {
         scrolledAway = true;
@@ -259,6 +282,9 @@ export function WaterBackground() {
       cancelled = true;
       window.removeEventListener('scroll', onScroll);
       document.removeEventListener('visibilitychange', onVisibility);
+      // The backdrop belongs to ScrollBackdrop and outlives this effect —
+      // don't leave a stale mid-scroll scale on it.
+      if (backdrop) backdrop.style.transform = '';
       controller?.destroy();
       controller = undefined;
     };
