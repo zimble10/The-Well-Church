@@ -16,8 +16,8 @@ giving, member portal, contact form) render as styled "Coming soon" states.
 
 Live demo: **https://thewell-demo.pages.dev** — the interactive WebGL water background
 runs on **every device**, tuned per tier (sim resolution, pixel-ratio cap, fps cap), and
-derates itself when out of sight: it pauses once you scroll past the pool and sleeps when
-the water has decayed flat. Devices without WebGL2 get a 2D ring fallback; only
+derates itself when out of sight: it fades into the CSS pool as you scroll past the hero,
+pauses only once fully invisible, and sleeps when the water has decayed flat. Devices without WebGL2 get a 2D ring fallback; only
 `prefers-reduced-motion` gets the static CSS pool. Append `?water=debug` to any URL to
 see which path a device took.
 

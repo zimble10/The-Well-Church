@@ -217,19 +217,35 @@ export function WaterBackground() {
     /*
      * The canvas is position:fixed behind everything, so once the reader has
      * scrolled into the page's content the water is almost entirely occluded —
-     * yet it kept rendering at full cost. Pause it when the pool is well out of
-     * view and let the last composited frame sit frozen on the canvas (nothing
-     * clears it while paused). The two thresholds are deliberately far apart:
-     * a 0.4-viewport dead band means scroll jitter at the boundary can never
-     * thrash pause/resume.
+     * yet it kept rendering at full cost. Simply pausing it looked wrong: any
+     * water still peeking through the content visibly froze mid-ripple. So the
+     * canvas FADES with scroll instead — full water through the first viewport,
+     * dissolving into the CSS pool underneath (which carries its own gentle
+     * shimmer) across the next three-quarters — and the sim is paused only
+     * once the canvas is fully transparent, where stopping is invisible. The
+     * scroll-linked opacity needs no CSS transition: it tracks the scroll
+     * position itself, so it is exactly as smooth as the reader's scrolling.
+     * The pause/resume thresholds both sit in the opacity-0 region, so their
+     * dead band can never show.
      */
+    const FADE_START = 1.0; // viewports scrolled where the fade begins
+    const FADE_END = 1.75; // fully transparent from here on
+    const PAUSE_AT = 1.9; // sim pauses (invisible — inside the faded region)
+    const RESUME_AT = 1.75; // sim resumes as the fade zone re-approaches
+    let lastOpacity = '';
     const onScroll = () => {
       const y = window.scrollY;
       const h = window.innerHeight;
-      if (!scrolledAway && y > h * 1.5) {
+      const t = (y / h - FADE_START) / (FADE_END - FADE_START);
+      const opacity = t <= 0 ? '1' : t >= 1 ? '0' : String(1 - t);
+      if (opacity !== lastOpacity) {
+        lastOpacity = opacity;
+        canvas.style.opacity = opacity;
+      }
+      if (!scrolledAway && y > h * PAUSE_AT) {
         scrolledAway = true;
         controller?.pause('offscreen');
-      } else if (scrolledAway && y < h * 1.1) {
+      } else if (scrolledAway && y < h * RESUME_AT) {
         scrolledAway = false;
         controller?.resume('offscreen');
       }
