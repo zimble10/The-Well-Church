@@ -108,6 +108,24 @@ function tuneForDevice(): Record<string, unknown> {
 export function WaterBackground() {
   const ref = useRef<HTMLCanvasElement>(null);
   const [debug, setDebug] = useState<string | null>(null);
+  const [gen, setGen] = useState(0);
+
+  /*
+   * prefers-reduced-motion is honoured LIVE by remounting the canvas: `gen`
+   * keys the element, so flipping the OS setting tears the whole thing down
+   * and builds it fresh. A same-element restart cannot work — destroy() ends
+   * with WEBGL_lose_context.loseContext() to free GPU memory, and a canvas
+   * whose context was force-lost hands back the same dead context forever
+   * (getContext('2d') on it returns null, so even the ring fallback dies).
+   * Only a new element gets a live context.
+   */
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const onChange = () => setGen((g) => g + 1);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
 
   useEffect(() => {
     const canvas = ref.current;
@@ -120,9 +138,13 @@ export function WaterBackground() {
       if (wantsDebug) queueMicrotask(() => setDebug(msg));
     };
 
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      report('off · prefers-reduced-motion');
+      return;
+    }
+
     let controller: Controller | undefined;
     let cancelled = false;
-    let starting = false;
     let scrolledAway = false;
     // The tier/mode part of the debug line; live pause/sleep state is appended.
     const baseReport = { current: '' };
@@ -149,53 +171,40 @@ export function WaterBackground() {
       });
 
     const boot = async () => {
-      // `starting` guards the async gap: a rapid double-toggle of the OS
-      // reduced-motion setting must never start two controllers on one canvas.
-      if (cancelled || starting || controller) return;
-      starting = true;
       try {
-        try {
-          await loadScript();
-        } catch {
-          report('ripples.js failed to load');
-          return;
-        }
-        if (cancelled || controller || mq.matches) return;
-        const start = (window as unknown as { startRipples?: StartRipples }).startRipples;
-        if (typeof start !== 'function') return;
-        const tuned = tuneForDevice();
-        try {
-          controller = start(canvas, {
-            ...BASE,
-            ...tuned,
-            onStateChange: wantsDebug
-              ? (state: string) => report(`${baseReport.current} · ${state}`)
-              : undefined,
-          });
-        } catch {
-          /* no WebGL2 → CSS pool shows through */
-          report('threw during start');
-          return;
-        }
-        if (!controller) return;
-        baseReport.current =
-          `${controller.mode} · ${controller.reason ?? '—'} · sim ${tuned.resolution} · dpr ` +
-          `${Math.min(window.devicePixelRatio || 1, Number(tuned.dprCap)).toFixed(2)} · ` +
-          `${window.innerWidth}×${window.innerHeight}`;
-        report(baseReport.current);
-        // The script loads asynchronously — the user may have scrolled past the
-        // pool or backgrounded the tab before start() ever ran. Apply the
-        // current reality to the fresh controller instead of assuming "awake".
-        if (document.hidden) controller.pause('hidden');
-        if (scrolledAway) controller.pause('offscreen');
-      } finally {
-        starting = false;
+        await loadScript();
+      } catch {
+        report('ripples.js failed to load');
+        return;
       }
-    };
-
-    const stop = () => {
-      controller?.destroy();
-      controller = undefined;
+      if (cancelled) return;
+      const start = (window as unknown as { startRipples?: StartRipples }).startRipples;
+      if (typeof start !== 'function') return;
+      const tuned = tuneForDevice();
+      try {
+        controller = start(canvas, {
+          ...BASE,
+          ...tuned,
+          onStateChange: wantsDebug
+            ? (state: string) => report(`${baseReport.current} · ${state}`)
+            : undefined,
+        });
+      } catch {
+        /* no WebGL2 → CSS pool shows through */
+        report('threw during start');
+        return;
+      }
+      if (!controller) return;
+      baseReport.current =
+        `${controller.mode} · ${controller.reason ?? '—'} · sim ${tuned.resolution} · dpr ` +
+        `${Math.min(window.devicePixelRatio || 1, Number(tuned.dprCap)).toFixed(2)} · ` +
+        `${window.innerWidth}×${window.innerHeight}`;
+      report(baseReport.current);
+      // The script loads asynchronously — the user may have scrolled past the
+      // pool or backgrounded the tab before start() ever ran. Apply the
+      // current reality to the fresh controller instead of assuming "awake".
+      if (document.hidden) controller.pause('hidden');
+      if (scrolledAway) controller.pause('offscreen');
     };
 
     const onVisibility = () => {
@@ -228,32 +237,20 @@ export function WaterBackground() {
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll(); // deep links / back-navigation restore scroll before we mount
 
-    // Honoured live, not just at mount: flipping the OS setting tears the
-    // water down or boots it without a reload.
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const applyMotionPref = () => {
-      if (mq.matches) {
-        stop();
-        report('off · prefers-reduced-motion');
-      } else {
-        void boot();
-      }
-    };
-    applyMotionPref();
-    mq.addEventListener('change', applyMotionPref);
+    void boot();
 
     return () => {
       cancelled = true;
-      mq.removeEventListener('change', applyMotionPref);
       window.removeEventListener('scroll', onScroll);
       document.removeEventListener('visibilitychange', onVisibility);
-      stop();
+      controller?.destroy();
+      controller = undefined;
     };
-  }, []);
+  }, [gen]);
 
   return (
     <>
-      <canvas ref={ref} className="fluid-canvas" aria-hidden />
+      <canvas key={gen} ref={ref} className="fluid-canvas" aria-hidden />
       {debug ? (
         <output className="fixed bottom-2 left-2 z-50 rounded bg-black/80 px-2 py-1 font-mono text-[11px] text-blue-200">
           water: {debug}
