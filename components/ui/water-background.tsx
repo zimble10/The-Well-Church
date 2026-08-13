@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 
 type Controller = {
-  pause: () => void;
-  resume: () => void;
+  pause: (reason?: string) => void;
+  resume: (reason?: string) => void;
   destroy: () => void;
   mode: 'webgl' | 'canvas' | 'none';
   reason: string | null;
@@ -105,14 +105,12 @@ export function WaterBackground() {
       if (wantsDebug) queueMicrotask(() => setDebug(msg));
     };
 
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reduce) {
-      report('off · prefers-reduced-motion');
-      return;
-    }
-
     let controller: Controller | undefined;
     let cancelled = false;
+    let starting = false;
+    let scrolledAway = false;
+    // The tier/mode part of the debug line; live pause/sleep state is appended.
+    const baseReport = { current: '' };
 
     const loadScript = () =>
       new Promise<void>((resolve, reject) => {
@@ -135,41 +133,106 @@ export function WaterBackground() {
         document.body.appendChild(s);
       });
 
-    loadScript()
-      .then(() => {
-        if (cancelled) return;
+    const boot = async () => {
+      // `starting` guards the async gap: a rapid double-toggle of the OS
+      // reduced-motion setting must never start two controllers on one canvas.
+      if (cancelled || starting || controller) return;
+      starting = true;
+      try {
+        try {
+          await loadScript();
+        } catch {
+          report('ripples.js failed to load');
+          return;
+        }
+        if (cancelled || controller || mq.matches) return;
         const start = (window as unknown as { startRipples?: StartRipples }).startRipples;
         if (typeof start !== 'function') return;
+        const tuned = tuneForDevice();
         try {
-          controller = start(canvas, { ...BASE, ...tuneForDevice() });
-          if (controller) {
-            const cfg = tuneForDevice();
-            report(
-              `${controller.mode} · ${controller.reason ?? '—'} · sim ${cfg.resolution} · dpr ` +
-                `${Math.min(window.devicePixelRatio || 1, Number(cfg.dprCap)).toFixed(2)} · ` +
-                `${window.innerWidth}×${window.innerHeight}`,
-            );
-          }
+          controller = start(canvas, {
+            ...BASE,
+            ...tuned,
+            onStateChange: wantsDebug
+              ? (state: string) => report(`${baseReport.current} · ${state}`)
+              : undefined,
+          });
         } catch {
           /* no WebGL2 → CSS pool shows through */
           report('threw during start');
+          return;
         }
-      })
-      .catch(() => {
-        report('ripples.js failed to load');
-      });
+        if (!controller) return;
+        baseReport.current =
+          `${controller.mode} · ${controller.reason ?? '—'} · sim ${tuned.resolution} · dpr ` +
+          `${Math.min(window.devicePixelRatio || 1, Number(tuned.dprCap)).toFixed(2)} · ` +
+          `${window.innerWidth}×${window.innerHeight}`;
+        report(baseReport.current);
+        // The script loads asynchronously — the user may have scrolled past the
+        // pool or backgrounded the tab before start() ever ran. Apply the
+        // current reality to the fresh controller instead of assuming "awake".
+        if (document.hidden) controller.pause('hidden');
+        if (scrolledAway) controller.pause('offscreen');
+      } finally {
+        starting = false;
+      }
+    };
+
+    const stop = () => {
+      controller?.destroy();
+      controller = undefined;
+    };
 
     const onVisibility = () => {
       if (!controller) return;
-      if (document.hidden) controller.pause();
-      else controller.resume();
+      if (document.hidden) controller.pause('hidden');
+      else controller.resume('hidden');
     };
     document.addEventListener('visibilitychange', onVisibility);
 
+    /*
+     * The canvas is position:fixed behind everything, so once the reader has
+     * scrolled into the page's content the water is almost entirely occluded —
+     * yet it kept rendering at full cost. Pause it when the pool is well out of
+     * view and let the last composited frame sit frozen on the canvas (nothing
+     * clears it while paused). The two thresholds are deliberately far apart:
+     * a 0.4-viewport dead band means scroll jitter at the boundary can never
+     * thrash pause/resume.
+     */
+    const onScroll = () => {
+      const y = window.scrollY;
+      const h = window.innerHeight;
+      if (!scrolledAway && y > h * 1.5) {
+        scrolledAway = true;
+        controller?.pause('offscreen');
+      } else if (scrolledAway && y < h * 1.1) {
+        scrolledAway = false;
+        controller?.resume('offscreen');
+      }
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll(); // deep links / back-navigation restore scroll before we mount
+
+    // Honoured live, not just at mount: flipping the OS setting tears the
+    // water down or boots it without a reload.
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const applyMotionPref = () => {
+      if (mq.matches) {
+        stop();
+        report('off · prefers-reduced-motion');
+      } else {
+        void boot();
+      }
+    };
+    applyMotionPref();
+    mq.addEventListener('change', applyMotionPref);
+
     return () => {
       cancelled = true;
+      mq.removeEventListener('change', applyMotionPref);
+      window.removeEventListener('scroll', onScroll);
       document.removeEventListener('visibilitychange', onVisibility);
-      controller?.destroy();
+      stop();
     };
   }, []);
 
