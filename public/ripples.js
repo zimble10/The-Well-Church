@@ -441,7 +441,8 @@ window.startRipples = function (canvas, cfg) {
   var pauseReasons = Object.create(null);
   var pauseCount = 0;
   function stateLabel() {
-    return pauseCount ? 'paused:' + Object.keys(pauseReasons).join('+') : 'awake';
+    var s = pauseCount ? 'paused:' + Object.keys(pauseReasons).join('+') : 'awake';
+    return degraded ? s + ' · degraded:dpr1' : s;
   }
   // Optional observability hook for the caller's debug overlay; never load-bearing.
   function onState() {
@@ -463,6 +464,13 @@ window.startRipples = function (canvas, cfg) {
   var prevT = 0;
   var slowStreak = 0;
   var degraded = false;
+  /*
+   * "Slow" is relative to the frame time this tier ASKED for. The old fixed
+   * 28ms budget treated the mobile tier's intended 33ms frames (maxFps 30) as
+   * struggling, so every healthy phone silently degraded to DPR 1 within
+   * seconds of arriving. Uncapped and 60fps tiers keep the original 28ms.
+   */
+  var slowMs = Math.max(28, minFrameMs * 1.5);
   function watchPerf(now) {
     if (!prevT) {
       prevT = now;
@@ -470,20 +478,32 @@ window.startRipples = function (canvas, cfg) {
     }
     var dt = now - prevT;
     prevT = now;
-    if (dt > 28) slowStreak++;
+    if (dt > slowMs) slowStreak++;
     else if (slowStreak > 0) slowStreak--;
     if (!degraded && slowStreak > 120 && DPR_CAP > 1) {
       degraded = true;
       DPR_CAP = 1;
       resizePending = true;
+      onState();
     }
   }
 
   function frame(now) {
     if (!running || lost) return;
     rafId = requestAnimationFrame(frame);
-    if (minFrameMs && now - _last < minFrameMs) return;
-    _last = now || 0;
+    if (minFrameMs) {
+      var elapsed = now - _last;
+      // Half a millisecond of grace absorbs rAF timestamps that land a hair
+      // early; without it a 30fps cap on a 60Hz display drops to 20fps.
+      if (elapsed < minFrameMs - 0.5) return;
+      // Snap the accumulator to the cap's grid instead of stamping `now` —
+      // stamping yields ~34fps from a 30fps cap on a 120Hz display. Taking the
+      // max keeps a long stall from snapping backwards, so recovery is one
+      // frame, never a catch-up burst.
+      _last = Math.max(_last + minFrameMs, now - (elapsed % minFrameMs));
+    } else {
+      _last = now || 0;
+    }
     watchPerf(now || 0);
     // Resize here, never from a standalone callback: the clear it causes is then
     // always followed by the render below, within the same frame.

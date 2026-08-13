@@ -76,7 +76,13 @@ function tuneForDevice(): Record<string, unknown> {
    * water with no fine detail to lose, which is precisely the kind of content
    * that does not repay rendering at full device resolution.
    */
-  return { resolution: lowEnd ? 384 : 512, dprCap: 1.5, stepEvery: 3 };
+  /*
+   * maxFps 60 even on high-refresh displays. Uncapped, a 120Hz monitor ran the
+   * whole pipeline twice as often for no visible gain — soft slow water has
+   * nothing that reads better at 120 — and, before sim stepping became
+   * time-based, it also made the water MOVE at double speed there.
+   */
+  return { resolution: lowEnd ? 384 : 512, dprCap: 1.5, maxFps: 60, stepEvery: 3 };
 }
 
 /**
