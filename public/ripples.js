@@ -5,6 +5,10 @@
  *
  * Exposes window.startRipples(canvas, config) -> { pause, resume, destroy, mode, reason }
  *
+ * pause(reason)/resume(reason) hold and release independent pause reasons
+ * (e.g. 'hidden', 'offscreen'); the animation runs only while no reason is
+ * held. config.onStateChange(label), if given, is told about state changes.
+ *
  * `mode` tells the caller which path the device actually got:
  *   'webgl'  — the full heightfield simulation
  *   'canvas' — the 2D ring fallback (no WebGL2, or no float render targets)
@@ -428,6 +432,23 @@ window.startRipples = function (canvas, cfg) {
   var rafId = 0;
 
   /*
+   * Pause is REASON-based. Two independent things pause the water — the tab
+   * being hidden and the page being scrolled past the pool — and a single
+   * boolean made them fight: hide the tab while scrolled down, show it again,
+   * and resume() would wrongly restart a canvas the scroll position still
+   * wanted paused. The loop runs only while NO reason is held.
+   */
+  var pauseReasons = Object.create(null);
+  var pauseCount = 0;
+  function stateLabel() {
+    return pauseCount ? 'paused:' + Object.keys(pauseReasons).join('+') : 'awake';
+  }
+  // Optional observability hook for the caller's debug overlay; never load-bearing.
+  function onState() {
+    if (typeof cfg.onStateChange === 'function') cfg.onStateChange(stateLabel());
+  }
+
+  /*
    * Adaptive quality. Fragment cost scales with the square of the pixel ratio,
    * so a weak GPU behind a high-DPI panel is the worst case — and it is exactly
    * the case we cannot detect up front. Rather than guess from a device string,
@@ -593,12 +614,25 @@ window.startRipples = function (canvas, cfg) {
   rafId = requestAnimationFrame(frame);
 
   return controllerFor('webgl', halfFloat ? 'half-float' : 'full-float', {
-    pause: function () {
-      running = false;
-      cancelAnimationFrame(rafId);
+    pause: function (reason) {
+      reason = reason || 'external';
+      if (!pauseReasons[reason]) {
+        pauseReasons[reason] = true;
+        pauseCount++;
+      }
+      if (running) {
+        running = false;
+        cancelAnimationFrame(rafId);
+      }
+      onState();
     },
-    resume: function () {
-      if (!running) {
+    resume: function (reason) {
+      reason = reason || 'external';
+      if (pauseReasons[reason]) {
+        delete pauseReasons[reason];
+        pauseCount--;
+      }
+      if (pauseCount === 0 && !running) {
         running = true;
         // A pause is not a slow frame. Without this the gap since the last frame
         // would be counted against the perf budget and could degrade quality for
@@ -607,6 +641,7 @@ window.startRipples = function (canvas, cfg) {
         _last = 0;
         if (!lost) rafId = requestAnimationFrame(frame);
       }
+      onState();
     },
     destroy: function () {
       running = false;
@@ -649,6 +684,17 @@ window.startRipples2D = function (canvas, cfg) {
   var last = 0;
   var W = 0;
   var H = 0;
+
+  // Same reason-based pause as the WebGL path (see startRipples): the loop runs
+  // only while no reason — hidden tab, scrolled away — is held.
+  var pauseReasons = Object.create(null);
+  var pauseCount = 0;
+  function stateLabel() {
+    return pauseCount ? 'paused:' + Object.keys(pauseReasons).join('+') : 'awake';
+  }
+  function onState() {
+    if (typeof cfg.onStateChange === 'function') cfg.onStateChange(stateLabel());
+  }
 
   /* Same rule as the WebGL path: flag it, apply it inside the draw. Assigning
      canvas.width clears the 2D surface too, so resizing from a standalone
@@ -744,16 +790,30 @@ window.startRipples2D = function (canvas, cfg) {
   rafId = requestAnimationFrame(frame);
 
   return {
-    pause: function () {
-      running = false;
-      cancelAnimationFrame(rafId);
+    pause: function (reason) {
+      reason = reason || 'external';
+      if (!pauseReasons[reason]) {
+        pauseReasons[reason] = true;
+        pauseCount++;
+      }
+      if (running) {
+        running = false;
+        cancelAnimationFrame(rafId);
+      }
+      onState();
     },
-    resume: function () {
-      if (!running) {
+    resume: function (reason) {
+      reason = reason || 'external';
+      if (pauseReasons[reason]) {
+        delete pauseReasons[reason];
+        pauseCount--;
+      }
+      if (pauseCount === 0 && !running) {
         running = true;
         last = 0;
         rafId = requestAnimationFrame(frame);
       }
+      onState();
     },
     destroy: function () {
       running = false;
