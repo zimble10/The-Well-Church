@@ -337,6 +337,7 @@ window.startRipples = function (canvas, cfg) {
   }
 
   function drop(dcx, dcy, radius, strength) {
+    stepsSinceExcite = 0; // any excitation restarts the decay-to-sleep clock
     gl.bindFramebuffer(gl.FRAMEBUFFER, fboB);
     gl.viewport(0, 0, SIM, SIM);
     gl.useProgram(pDrop);
@@ -425,6 +426,9 @@ window.startRipples = function (canvas, cfg) {
    */
   function resize() {
     resizePending = true;
+    // A rotation or window drag while asleep must repaint — reallocating the
+    // buffer clears it, and a stopped loop would leave that clear on screen.
+    wake();
   }
 
   try {
@@ -451,12 +455,47 @@ window.startRipples = function (canvas, cfg) {
   var pauseReasons = Object.create(null);
   var pauseCount = 0;
   function stateLabel() {
-    var s = pauseCount ? 'paused:' + Object.keys(pauseReasons).join('+') : 'awake';
+    var s = pauseCount
+      ? 'paused:' + Object.keys(pauseReasons).join('+')
+      : asleep
+        ? 'asleep'
+        : 'awake';
     return degraded ? s + ' · degraded:dpr1' : s;
   }
   // Optional observability hook for the caller's debug overlay; never load-bearing.
   function onState() {
     if (typeof cfg.onStateChange === 'function') cfg.onStateChange(stateLabel());
+  }
+
+  /*
+   * Quiescence sleep. Once nothing has excited the surface for long enough
+   * that the tallest possible ripple has decayed below ~2% of a fresh drop,
+   * the water is visually flat and every further frame is a repaint of the
+   * same image — so the loop stops entirely and the last composited frame
+   * sits on the canvas. Tracked analytically from the per-step damping (no
+   * GPU readback): amplitude after N steps ≤ stepDamping^N. That envelope
+   * ignores the extra loss from waves spreading out, so it only ever sleeps
+   * LATE, never freezes visibly moving water. With the ambient drops running
+   * this never fires (they re-excite every ~2s); it matters when drops are
+   * paused or configured sparse.
+   */
+  var asleep = false;
+  var stepsSinceExcite = 0;
+  var SLEEP_EPS = 0.02;
+  var sleepAfterSteps = Math.ceil(Math.log(SLEEP_EPS) / Math.log(stepDamping));
+  if (!isFinite(sleepAfterSteps) || sleepAfterSteps <= 0) sleepAfterSteps = Infinity;
+
+  function wake() {
+    if (!asleep) return;
+    asleep = false;
+    // Waking mirrors resume(): the sleep gap is neither a slow frame nor
+    // elapsed sim time.
+    prevT = 0;
+    _last = 0;
+    simAcc = 0;
+    simLast = 0;
+    if (running && !lost) rafId = requestAnimationFrame(frame);
+    onState();
   }
 
   /*
@@ -500,6 +539,16 @@ window.startRipples = function (canvas, cfg) {
 
   function frame(now) {
     if (!running || lost) return;
+    // Sleep check before rescheduling: decayed flat, nothing queued, nothing
+    // pending — stop the loop dead. wake() restarts it on the next drop,
+    // pointer input, or resize. The !resizePending clause guarantees a woken
+    // resize always reaches applySize() + render() before re-sleeping, so the
+    // canvas is never left cleared by a rotation while asleep.
+    if (stepsSinceExcite > sleepAfterSteps && !pendingMove && !pendingPress && !resizePending) {
+      asleep = true;
+      onState();
+      return;
+    }
     rafId = requestAnimationFrame(frame);
     if (minFrameMs) {
       var elapsed = now - _last;
@@ -526,6 +575,7 @@ window.startRipples = function (canvas, cfg) {
     simLast = now;
     while (simAcc >= simDt) {
       simAcc -= simDt;
+      stepsSinceExcite++;
       step();
     }
     render();
@@ -579,6 +629,7 @@ window.startRipples = function (canvas, cfg) {
   function onPointerMove(e) {
     if (!running || lost) return;
     pendingMove = [e.clientX, e.clientY, cfg.cursorRadius || 0.03, cfg.cursorStrength || 0.06];
+    wake();
   }
   function onPointerDown(e) {
     if (!running || lost) return;
@@ -589,6 +640,7 @@ window.startRipples = function (canvas, cfg) {
       (cfg.cursorRadius || 0.03) * 1.6,
       (cfg.cursorStrength || 0.06) * 2.2,
     ];
+    wake();
   }
   function onTouchMove(e) {
     if (!running || lost || !e.touches || !e.touches.length) return;
@@ -596,6 +648,7 @@ window.startRipples = function (canvas, cfg) {
     // survives to the screen anyway.
     var t = e.touches[0];
     pendingMove = [t.clientX, t.clientY, cfg.cursorRadius || 0.03, cfg.cursorStrength || 0.06];
+    wake();
   }
 
   var OPTS = { passive: true };
@@ -634,6 +687,10 @@ window.startRipples = function (canvas, cfg) {
       if (!build()) return;
       applySize();
       lost = false;
+      // The rebuilt textures are flat; a stale counter would re-sleep on a
+      // blank canvas before the vignette ever repainted.
+      asleep = false;
+      stepsSinceExcite = 0;
       if (running) rafId = requestAnimationFrame(frame);
     } catch (err) {
       /* stays on the CSS pool */
@@ -645,7 +702,10 @@ window.startRipples = function (canvas, cfg) {
   // Gentle rings from the centre (behind the logo), softly expanding outward.
   for (var i = 0; i < 2; i++) drop(cx, cy, dropRadius, dropStrength);
   var amb = setInterval(function () {
-    if (running && !lost) drop(cx, cy, dropRadius, dropStrength);
+    if (running && !lost) {
+      wake();
+      drop(cx, cy, dropRadius, dropStrength);
+    }
   }, cfg.dropInterval || 900);
 
   rafId = requestAnimationFrame(frame);
@@ -679,7 +739,10 @@ window.startRipples = function (canvas, cfg) {
         _last = 0;
         simAcc = 0;
         simLast = 0;
-        if (!lost) rafId = requestAnimationFrame(frame);
+        // Flat asleep water renders identically to its retained frame, so
+        // resuming does not force a wake; the next ambient drop or pointer
+        // move restarts the loop.
+        if (!lost && !asleep) rafId = requestAnimationFrame(frame);
       }
       onState();
     },
@@ -729,11 +792,23 @@ window.startRipples2D = function (canvas, cfg) {
   // only while no reason — hidden tab, scrolled away — is held.
   var pauseReasons = Object.create(null);
   var pauseCount = 0;
+  // Rings die completely in a few seconds, so unlike the WebGL heightfield
+  // this path has a natural quiescence signal: an empty rings array. Sleep
+  // whenever it empties; spawn() wakes it.
+  var asleep = false;
   function stateLabel() {
-    return pauseCount ? 'paused:' + Object.keys(pauseReasons).join('+') : 'awake';
+    if (pauseCount) return 'paused:' + Object.keys(pauseReasons).join('+');
+    return asleep ? 'asleep' : 'awake';
   }
   function onState() {
     if (typeof cfg.onStateChange === 'function') cfg.onStateChange(stateLabel());
+  }
+  function wake() {
+    if (!asleep) return;
+    asleep = false;
+    last = 0; // the sleep gap is not a frame interval
+    if (running) rafId = requestAnimationFrame(frame);
+    onState();
   }
 
   /* Same rule as the WebGL path: flag it, apply it inside the draw. Assigning
@@ -770,10 +845,18 @@ window.startRipples2D = function (canvas, cfg) {
   function spawn(x, y, strength) {
     if (rings.length > 28) rings.shift(); // hard cap keeps the cost flat
     rings.push({ x: x, y: y, r: 0, a: strength });
+    wake();
   }
 
   function frame(now) {
     if (!running) return;
+    // Every ring has died and nothing is pending: the canvas is already blank,
+    // so stop the loop dead until the next spawn.
+    if (!rings.length && !resizePending2) {
+      asleep = true;
+      onState();
+      return;
+    }
     rafId = requestAnimationFrame(frame);
     if (now - last < 33) return; // ~30fps is plenty for slow rings
     var dt = last ? Math.min((now - last) / 1000, 0.1) : 0.033;
@@ -851,7 +934,7 @@ window.startRipples2D = function (canvas, cfg) {
       if (pauseCount === 0 && !running) {
         running = true;
         last = 0;
-        rafId = requestAnimationFrame(frame);
+        if (!asleep) rafId = requestAnimationFrame(frame);
       }
       onState();
     },
