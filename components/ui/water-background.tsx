@@ -65,6 +65,11 @@ function tuneForDevice(): Record<string, unknown> {
       dprCap: 1.25,
       maxFps: 30,
       stepHz: 20,
+      // A decorative background should never claim a phone's fast GPU core.
+      // Advisory — some browsers ignore it — and deliberately not set on the
+      // desktop tiers, where forcing the iGPU is a choice the browser makes
+      // better than we can.
+      powerPreference: 'low-power',
       // Scrolling retracts the browser chrome and changes the viewport height
       // without the user resizing anything. See applySize in ripples.js.
       ignoreChromeJitter: true,

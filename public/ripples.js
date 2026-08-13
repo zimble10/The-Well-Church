@@ -47,6 +47,9 @@ window.startRipples = function (canvas, cfg) {
     // Never let the browser refuse the context just because it would be slow —
     // a soft renderer still looks better here than a static gradient.
     failIfMajorPerformanceCaveat: false,
+    // Advisory only, and must be stated at creation time. The mobile tier
+    // passes 'low-power' so a background effect never claims the fast GPU.
+    powerPreference: cfg.powerPreference || 'default',
   });
   if (!gl) return fallback('no-webgl2');
 
