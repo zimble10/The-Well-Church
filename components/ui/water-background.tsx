@@ -240,7 +240,7 @@ export function WaterBackground() {
     const FADE_END = 1.75; // fully transparent from here on
     const PAUSE_AT = 1.9; // sim pauses (invisible — inside the faded region)
     const RESUME_AT = 1.75; // sim resumes as the fade zone re-approaches
-    const POOL_SCALE_MAX = 1.6; // pool circle expansion once the water is gone
+    const POOL_SCALE_MAX = 1.8; // pool circle expansion once the water is gone
     const backdrop = document.querySelector<HTMLElement>('.site-bg');
     let lastOpacity = '';
     let lastScale = '';
