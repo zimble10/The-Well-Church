@@ -179,7 +179,16 @@ window.startRipples = function (canvas, cfg) {
   // [fully opaque water, fully faded] as aspect-corrected radii, where 1.0 is the
   // top/bottom edge of the viewport. Tune these to move the black fade in or out.
   var vignette = cfg.vignette || [0.5, 1.25];
-  var stepEvery = cfg.stepEvery || 3; // sim step once per N frames → slower outward travel
+  /*
+   * Sim step rate in steps per SECOND, not per frame. Stepping every Nth frame
+   * tied the water's speed to the display: a 30fps phone got 15 steps/s and
+   * visibly slower water than a 60fps desktop's 20, and an uncapped 144Hz
+   * monitor got 48. A wall-clock rate gives every device the same water.
+   * stepEvery is still accepted and converted, assuming the 60fps it was
+   * originally tuned against.
+   */
+  var stepHz = cfg.stepHz || (cfg.stepEvery ? 60 / cfg.stepEvery : 20);
+  var simDt = 1000 / stepHz;
   var dropRadius = cfg.dropRadius || 0.05;
   var dropStrength = cfg.dropStrength || 0.12;
   var minFrameMs = cfg.maxFps ? 1000 / cfg.maxFps : 0;
@@ -427,7 +436,8 @@ window.startRipples = function (canvas, cfg) {
 
   var running = true;
   var lost = false;
-  var _f = 0;
+  var simAcc = 0;
+  var simLast = 0;
   var _last = 0;
   var rafId = 0;
 
@@ -509,8 +519,15 @@ window.startRipples = function (canvas, cfg) {
     // always followed by the render below, within the same frame.
     if (resizePending) applySize();
     flushInput(); // at most one move + one press, whatever the input rate
-    _f++;
-    if (_f % stepEvery === 0) step(); // propagate 1/stepEvery as fast (gentle roll)
+    // Fixed-dt accumulator: run however many whole sim steps this frame's
+    // elapsed time has earned. The cap keeps one janky frame from spiralling
+    // into extra catch-up work on a machine that is already struggling.
+    simAcc = Math.min(simAcc + (simLast ? now - simLast : simDt), simDt * 4);
+    simLast = now;
+    while (simAcc >= simDt) {
+      simAcc -= simDt;
+      step();
+    }
     render();
   }
 
@@ -654,11 +671,14 @@ window.startRipples = function (canvas, cfg) {
       }
       if (pauseCount === 0 && !running) {
         running = true;
-        // A pause is not a slow frame. Without this the gap since the last frame
-        // would be counted against the perf budget and could degrade quality for
-        // nothing more than the tab having been in the background.
+        // A pause is not a slow frame, and not elapsed sim time either. Without
+        // this the gap since the last frame would be counted against the perf
+        // budget — degrading quality because the tab was in the background —
+        // and the step accumulator would integrate the pause as motion.
         prevT = 0;
         _last = 0;
+        simAcc = 0;
+        simLast = 0;
         if (!lost) rafId = requestAnimationFrame(frame);
       }
       onState();

@@ -55,19 +55,23 @@ function tuneForDevice(): Record<string, unknown> {
   const cores = navigator.hardwareConcurrency ?? 4;
   const lowEnd = cores <= 4;
 
+  // stepHz 20 on every tier: sim stepping is wall-clock-based in ripples.js,
+  // so the water moves at the same speed on a 30fps phone, a 60fps laptop and
+  // a 144Hz monitor. (The old per-frame stepEvery gave phones visibly slower
+  // water — 15 steps/s against the desktop's 20.)
   if (coarse || w < 768) {
     return {
       resolution: lowEnd ? 192 : 256,
       dprCap: 1.25,
       maxFps: 30,
-      stepEvery: 2,
+      stepHz: 20,
       // Scrolling retracts the browser chrome and changes the viewport height
       // without the user resizing anything. See applySize in ripples.js.
       ignoreChromeJitter: true,
     };
   }
   if (w < 1280) {
-    return { resolution: 384, dprCap: 1.5, maxFps: 60, stepEvery: 3 };
+    return { resolution: 384, dprCap: 1.5, maxFps: 60, stepHz: 20 };
   }
   /*
    * dprCap 1.5 rather than 2. Fragment cost scales with the SQUARE of the pixel
@@ -82,7 +86,7 @@ function tuneForDevice(): Record<string, unknown> {
    * nothing that reads better at 120 — and, before sim stepping became
    * time-based, it also made the water MOVE at double speed there.
    */
-  return { resolution: lowEnd ? 384 : 512, dprCap: 1.5, maxFps: 60, stepEvery: 3 };
+  return { resolution: lowEnd ? 384 : 512, dprCap: 1.5, maxFps: 60, stepHz: 20 };
 }
 
 /**
