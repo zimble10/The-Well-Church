@@ -443,6 +443,7 @@ window.startRipples = function (canvas, cfg) {
 
   var running = true;
   var lost = false;
+  var pausedAt = 0;
   var simAcc = 0;
   var simLast = 0;
   var _last = 0;
@@ -499,6 +500,25 @@ window.startRipples = function (canvas, cfg) {
     simLast = 0;
     if (running && !lost) rafId = requestAnimationFrame(frame);
     onState();
+  }
+
+  /*
+   * Rebuild a developed field after a real pause. While paused no ambient
+   * drops fire, so the field the pause froze just carries its old rings
+   * outward — resuming shows near-calm water that takes seconds to look
+   * alive again. Scrolling back up, that read as the fade-in not matching
+   * the fade-out: the ramp was symmetric, the water returning through it
+   * was not. Replaying a few ambient cycles synchronously (drop, then the
+   * steps one drop interval is worth) leaves the field exactly as developed
+   * as if it had never stopped. ~50 sim-resolution passes, a one-off cost
+   * far below a single full-screen render.
+   */
+  function prime() {
+    var stepsPerDrop = Math.max(1, Math.round((cfg.dropInterval || 900) / simDt));
+    for (var k = 0; k < 3; k++) {
+      drop(cx, cy, dropRadius, dropStrength);
+      for (var s = 0; s < stepsPerDrop; s++) step();
+    }
   }
 
   /*
@@ -722,6 +742,7 @@ window.startRipples = function (canvas, cfg) {
       }
       if (running) {
         running = false;
+        pausedAt = performance.now();
         cancelAnimationFrame(rafId);
       }
       onState();
@@ -742,6 +763,14 @@ window.startRipples = function (canvas, cfg) {
         _last = 0;
         simAcc = 0;
         simLast = 0;
+        // After a pause long enough for the field to have gone stale, rebuild
+        // it so the water returns mid-motion (see prime). Short dead-band
+        // bounces keep their live field untouched. prime() drops, so it also
+        // clears any sleep state via stepsSinceExcite.
+        if (!lost && pausedAt && performance.now() - pausedAt > 2500) {
+          prime();
+          asleep = false;
+        }
         // Flat asleep water renders identically to its retained frame, so
         // resuming does not force a wake; the next ambient drop or pointer
         // move restarts the loop.
@@ -786,6 +815,7 @@ window.startRipples2D = function (canvas, cfg) {
   var speed = cfg.waveSpeed || 1.0;
   var rings = [];
   var running = true;
+  var pausedAt = 0;
   var rafId = 0;
   var last = 0;
   var W = 0;
@@ -924,6 +954,7 @@ window.startRipples2D = function (canvas, cfg) {
       }
       if (running) {
         running = false;
+        pausedAt = performance.now();
         cancelAnimationFrame(rafId);
       }
       onState();
@@ -937,6 +968,23 @@ window.startRipples2D = function (canvas, cfg) {
       if (pauseCount === 0 && !running) {
         running = true;
         last = 0;
+        // Same staleness rule as the WebGL path: after a real pause the old
+        // rings have mostly died, so reseed a few at the radii they would
+        // have reached had the ambient interval kept firing.
+        if (pausedAt && performance.now() - pausedAt > 2500) {
+          var maxR = Math.max(W, H) * 0.75;
+          var ivl = (cfg.dropInterval || 1400) / 1000;
+          for (var k = 1; k <= 3; k++) {
+            var age = k * ivl;
+            rings.push({
+              x: W * 0.5,
+              y: H * 0.5,
+              r: maxR * 0.16 * speed * age,
+              a: 0.26 * Math.exp(-0.55 * age),
+            });
+          }
+          asleep = false;
+        }
         if (!asleep) rafId = requestAnimationFrame(frame);
       }
       onState();
