@@ -438,17 +438,27 @@
   place-items: center;
   opacity: 0;
   /* Fades in with scroll: invisible near the top, full brightness ~half a
-     viewport down. Solid at full so ripples emerge from BEHIND it. */
+     viewport down. Solid at full so ripples emerge from BEHIND it. Then fades
+     back OUT in step with the water canvas, so mark and water leave together.
+     One scroll-driven animation covers both legs; the keyframe offsets below
+     are scroll distances as fractions of the 4vh–175vh range. The fade-out leg
+     (100vh–175vh) MUST match FADE_START/FADE_END in water-background.tsx. */
   animation: logo-fade linear both;
   animation-timeline: scroll(root);
-  animation-range: 4vh 44vh;
+  animation-range: 4vh 175vh;
 }
 @keyframes logo-fade {
-  from {
-    opacity: 0;
+  0% {
+    opacity: 0; /* 4vh */
   }
-  to {
-    opacity: 0.6;
+  23.4% {
+    opacity: 0.6; /* 44vh — fully in */
+  }
+  56.1% {
+    opacity: 0.6; /* 100vh — water fade begins */
+  }
+  100% {
+    opacity: 0; /* 175vh — gone with the water */
   }
 }
 @supports not (animation-timeline: scroll(root)) {

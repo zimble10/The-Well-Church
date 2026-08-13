@@ -240,7 +240,9 @@ export function WaterBackground() {
     const FADE_END = 1.75; // fully transparent from here on
     const PAUSE_AT = 1.9; // sim pauses (invisible — inside the faded region)
     const RESUME_AT = 1.75; // sim resumes as the fade zone re-approaches
-    const POOL_SCALE_MAX = 1.8; // pool circle expansion once the water is gone
+    // NOTE: the logo watermark's fade-out (.stage-image logo-fade keyframes in
+    // globals.css) is pinned to FADE_START/FADE_END — change these together.
+    const POOL_SCALE_MAX = 2.25; // pool circle expansion once the water is gone
     const backdrop = document.querySelector<HTMLElement>('.site-bg');
     let lastOpacity = '';
     let lastScale = '';
