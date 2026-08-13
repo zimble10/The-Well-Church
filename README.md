@@ -15,8 +15,11 @@ front-end-only **pitch demo** on branch `demo/church-frontend` — a fully stati
 giving, member portal, contact form) render as styled "Coming soon" states.
 
 Live demo: **https://thewell-demo.pages.dev** — the interactive WebGL water background
-is **desktop-only** (needs hover + a fine pointer + ≥1024px); phones and
-`prefers-reduced-motion` get the CSS fallback. Demo it on a laptop.
+runs on **every device**, tuned per tier (sim resolution, pixel-ratio cap, fps cap), and
+derates itself when out of sight: it pauses once you scroll past the pool and sleeps when
+the water has decayed flat. Devices without WebGL2 get a 2D ring fallback; only
+`prefers-reduced-motion` gets the static CSS pool. Append `?water=debug` to any URL to
+see which path a device took.
 
 Backend is **FROZEN** at Phase 0.3 (Prisma schema + RLS, branch
 `feature/phase-0.3-database`). Do not build Phase 0.4+ until the church greenlights.

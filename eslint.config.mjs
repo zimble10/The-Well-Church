@@ -14,7 +14,8 @@ const eslintConfig = defineConfig([
     'out/**',
     'build/**',
     'next-env.d.ts',
-    // Vendored third-party script (WebGL fluid sim) — see NOTICE.md
+    // ripples.js: original in-house WebGL water sim (see NOTICE.md), shipped as
+    // a plain browser script deliberately outside the lint/TS toolchain.
     'public/**',
   ]),
 ]);
